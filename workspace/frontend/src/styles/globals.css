@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* 1. Tokens & Reset */
+@import "./tokens.css";
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  background-color: var(--black);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+/* 2. Architecture Layers */
+@import "./layout.css";
+@import "./typography.css";
+@import "./glass.css";
+
+/* 3. Component Layers */
+@import "./components/button.css";
+
+/* 4. Global Animations */
+@keyframes pulse-neon {
+  0% { box-shadow: 0 0 5px rgba(0, 204, 153, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(0, 204, 153, 0.5); }
+  100% { box-shadow: 0 0 5px rgba(0, 204, 153, 0.2); }
+}
+
+.animate-neon {
+  animation: pulse-neon 2s infinite;
+}

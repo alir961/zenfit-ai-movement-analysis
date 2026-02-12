@@ -50,6 +50,7 @@ Project constraints and stack source reference: :contentReference[oaicite:0]{ind
 ### Minimal root structure
 - `./docs`
 - `./workspace/frontend`
+- `./workspace/backend` (Socket.IO + RTMW3D)
 - `./scripts`
 - `./.gitignore`
 - `./justfile`
@@ -235,7 +236,7 @@ Keep payloads typed and versioned. Do not add unused fields.
 │     ├─ package.json
 │     ├─ postcss.config.* 
 │     └─ tailwind.config.* (if used lightly)
-├─ backend/                                # only if needed
+├─ workspace/backend/                                # only if needed
 │  ├─ app/
 │  │  ├─ main.py
 │  │  ├─ socket_server.py
@@ -379,7 +380,7 @@ MVP is done only when all conditions are true:
 
 4. Stack compliance:
 
-   * Next 16 + R3F + Drei + Framer Motion + CSS/Tailwind/PostCSS
+   * Next 16 + R3F + Drei + Framer Motion + CSS/Tailwind/PostCSS + bun (no npm or pnpm)
    * Backend (if needed) is Socket.IO + Python only
 
 5. Project structure and scripts respect requested layout.

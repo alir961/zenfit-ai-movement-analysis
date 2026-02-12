@@ -1,0 +1,313 @@
+import logging
+import os
+import sys
+import warnings
+from typing import Optional, List, Dict, Any
+
+# Silence noisy dependency warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+
+import numpy as np
+import torch
+import cv2
+import time
+import traceback
+
+# 1. Setup paths for custom modules
+PROJ_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+RTMP_PATH = os.path.join(PROJ_ROOT, "third_party", "mmpose", "projects", "rtmpose3d")
+
+if os.path.exists(RTMP_PATH):
+    if RTMP_PATH not in sys.path:
+        sys.path.append(RTMP_PATH)
+    try:
+        import rtmpose3d
+    except ImportError:
+        logging.getLogger("zenfit.rtmw3d").warning("Could not import custom rtmpose3d modules from %s", RTMP_PATH)
+
+# Dependencies MMPose
+try:
+    from mmpose.apis import init_model, inference_topdown
+    from mmdet.apis import DetInferencer, inference_detector
+    from mmengine.registry import DefaultScope
+    HAS_MMPOSE = True
+except ImportError:
+    HAS_MMPOSE = False
+
+# Dependencies ONNX
+try:
+    import onnxruntime as ort
+    HAS_ONNX = True
+except ImportError:
+    HAS_ONNX = False
+
+from ..contracts.events import PoseFrame, PoseJoint, JOINT_NAMES
+
+logger = logging.getLogger("zenfit.rtmw3d")
+
+class RTMW3DRunner:
+    """
+    Robust RTMW3D Wrapper (PyTorch & ONNX).
+    Handles model initialization, inference, and conversion to ZenFit internal schema.
+    """
+
+    MODEL_CONFIGS = {
+        "l": {
+            "config": os.path.join(RTMP_PATH, "configs", "rtmw3d-l_8xb64_cocktail14-384x288.py"),
+            "checkpoint": os.path.join(PROJ_ROOT, "rtmw3d-l_8xb64_cocktail14-384x288-794dbc78_20240626.pth"),
+            "onnx": os.path.join(PROJ_ROOT, "rtmw3d_l_fp16.onnx")
+        },
+        "x": {
+            "config": os.path.join(RTMP_PATH, "configs", "rtmw3d-x_8xb32_cocktail14-384x288.py"),
+            "checkpoint": os.path.join(PROJ_ROOT, "rtmw3d-x_8xb64_cocktail14-384x288-b0a0eab7_20240626.pth"),
+            "onnx": os.path.join(PROJ_ROOT, "rtmw3d_x.onnx")
+        }
+    }
+
+    DET_ALIAS = "rtmdet_m_8xb32-300e_coco"
+
+    def __init__(self, model_size: str = "l", device: str = "auto") -> None:
+        self.model_size = model_size.lower().strip()
+        self.device = device
+        self.ready = False
+        self._detector = None
+        self._pose_model = None
+        self._ort_session = None
+        self._input_name = None
+        self.use_onnx = False
+        
+        # Tracking state
+        self._last_bbox = None
+        self._track_count = 0
+        self._track_interval = 10 # Run heavy detector every 10 frames
+
+        if not HAS_MMPOSE:
+            logger.error("MMPose or MMDetection not installed. RTMW3D runner will not work.")
+            return
+
+        if self.device == "auto":
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        # Initialize Detector (Always PyTorch for now, unless exported separately)
+        try:
+            from mmdet.apis import DetInferencer
+            logger.info("Initializing detector %s...", self.DET_ALIAS)
+            det_inf = DetInferencer(self.DET_ALIAS, device=self.device)
+            self._detector = det_inf.model
+        except Exception as e:
+            logger.error(f"Failed to load detector: {e}")
+            return
+
+        cfg_entry = self.MODEL_CONFIGS.get(self.model_size, self.MODEL_CONFIGS["l"])
+
+        # Try ONNX First if available and HAS_ONNX
+        onnx_path = cfg_entry.get("onnx")
+        if HAS_ONNX and onnx_path and os.path.exists(onnx_path):
+            self._init_onnx(onnx_path)
+            if self.ready:
+                return
+
+        # Fallback to PyTorch
+        self._init_pytorch(cfg_entry)
+
+    def _init_onnx(self, onnx_path: str):
+        try:
+            logger.info(f"🚀 Loading ONNX model from {onnx_path}...")
+            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if self.device == 'cuda' else ['CPUExecutionProvider']
+            self._ort_session = ort.InferenceSession(onnx_path, providers=providers)
+            self._input_name = self._ort_session.get_inputs()[0].name
+            self.use_onnx = True
+            self.ready = True
+            logger.info("✅ ONNX Runtime initialized successfully.")
+        except Exception as e:
+            logger.error(f"❌ ONNX init failed: {e}. Falling back to PyTorch.")
+            self.use_onnx = False
+
+    def _init_pytorch(self, cfg_entry: dict):
+        try:
+            logger.info("Initializing PyTorch pose model from %s...", cfg_entry["config"])
+            
+            if not os.path.exists(cfg_entry["config"]):
+                raise FileNotFoundError(f"Config file not found: {cfg_entry['config']}")
+            if not os.path.exists(cfg_entry["checkpoint"]):
+                raise FileNotFoundError(f"Checkpoint file not found: {cfg_entry['checkpoint']}")
+
+            self._pose_model = init_model(cfg_entry["config"], cfg_entry["checkpoint"], device=self.device)
+            self.ready = True
+            logger.info("RTMW3D runner initialized with size %s on %s", self.model_size, self.device)
+        except Exception as exc:
+            logger.error("RTMW3D runner failed to initialize: %s", exc)
+            self.ready = False
+
+    def infer(self, frame_bgr: np.ndarray, input_size: Optional[tuple[int, int]] = None) -> Optional[PoseFrame]:
+        if not self.ready or self._detector is None:
+            return None
+
+        try:
+            h_img, w_img = frame_bgr.shape[:2]
+            t0 = time.perf_counter()
+            
+            # --- Detection Logic with Tracking ---
+            det_ms = 0.0
+            if self._last_bbox is not None and self._track_count < self._track_interval:
+                # Reuse last valid bbox
+                target_bbox = self._last_bbox
+                self._track_count += 1
+            else:
+                # 1. Run Heavy Detection
+                with DefaultScope.overwrite_default_scope('mmdet'):
+                    det_results = inference_detector(self._detector, frame_bgr)
+                
+                t_det_done = time.perf_counter()
+                det_ms = (t_det_done - t0) * 1000
+                
+                pred_instances = det_results.pred_instances.cpu().numpy()
+                bboxes = pred_instances.bboxes
+                scores = pred_instances.scores
+                
+                valid_idx = np.where(scores > 0.5)[0]
+                if len(valid_idx) == 0: 
+                    self._last_bbox = None
+                    self._track_count = 0
+                    return None
+                
+                best_idx = valid_idx[np.argmax(scores[valid_idx])]
+                target_bbox = bboxes[best_idx : best_idx + 1] # [x1, y1, x2, y2]
+                self._last_bbox = target_bbox
+                self._track_count = 0
+
+            # 2. Pose Inference
+            if self.use_onnx:
+                res = self._infer_onnx(frame_bgr, target_bbox[0])
+            else:
+                res = self._infer_pytorch(frame_bgr, target_bbox)
+            
+            t_total = (time.perf_counter() - t0) * 1000
+            
+            return res
+
+        except Exception as e:
+            logger.error("Inference RTMW3D failed: %s", e)
+            traceback.print_exc()
+            return None
+
+    def _infer_pytorch(self, frame, bboxes):
+        pose_results = inference_topdown(self._pose_model, frame, bboxes=bboxes)
+        if not pose_results: return None
+
+        p0 = pose_results[0]
+        inst = p0.pred_instances
+        
+        kpts_3d = inst.keypoints[0] # (N, 3) Meters? Actually for RTMW3D usually raw coordinates, need check
+        # NOTE: RTMW3D PyTorch output usually includes pixels in keypoints? 
+        # Actually RTMW3D output usually [x, y, z] relative to root?
+        
+        # Let's trust standard API for now as it worked in labs.py
+        kpts_2d = inst.transformed_keypoints[0] # (N, 2) Pixels
+        kpt_scores = inst.keypoint_scores[0]
+        
+        return self._pack_results(kpts_3d, kpts_2d, kpt_scores, frame.shape)
+
+    def _infer_onnx(self, frame, bbox):
+        try:
+            t0 = time.perf_counter()
+            # ONNX requires explicit pre-processing
+            x1, y1, x2, y2 = bbox
+            input_w, input_h = 288, 384
+            
+            w, h = x2 - x1, y2 - y1
+            
+            # Naive Crop with padding
+            pad_x = max(0, int(w * 0.1)); pad_y = max(0, int(h * 0.1))
+            x1 = max(0, int(x1 - pad_x)); y1 = max(0, int(y1 - pad_y))
+            x2 = min(frame.shape[1], int(x2 + pad_x)); y2 = min(frame.shape[0], int(y2 + pad_y))
+            
+            crop = frame[y1:y2, x1:x2]
+            if crop.size == 0: return None
+            
+            inp_img = cv2.resize(crop, (input_w, input_h))
+            
+            # Normalize
+            mean = np.array([123.675, 116.28, 103.53], dtype=np.float32)
+            std = np.array([58.395, 57.12, 57.375], dtype=np.float32)
+            
+            inp_tensor = (inp_img - mean) / std
+            inp_tensor = inp_tensor.transpose(2, 0, 1) # HWC -> CHW
+            
+            # Match ONNX precision (FP16)
+            inp_tensor = inp_tensor.astype(np.float16)
+            
+            inp_tensor = np.ascontiguousarray(inp_tensor)
+            inp_tensor = np.expand_dims(inp_tensor, 0)
+            
+            t_pre = (time.perf_counter() - t0) * 1000
+            
+            # Run ONNX
+            t_onnx_0 = time.perf_counter()
+            outputs = self._ort_session.run(None, {self._input_name: inp_tensor})
+            t_onnx_1 = (time.perf_counter() - t_onnx_0) * 1000
+            
+            simcc_x, simcc_y = outputs[0], outputs[1]
+
+            # Decode SimCC
+            loc_x = np.argmax(simcc_x[0], axis=1)
+            loc_y = np.argmax(simcc_y[0], axis=1)
+            
+            kpts_x = loc_x / 2.0
+            kpts_y = loc_y / 2.0
+            
+            # Map back
+            scale_x = (x2 - x1) / float(input_w)
+            scale_y = (y2 - y1) / float(input_h)
+            
+            orig_x = kpts_x * scale_x + x1
+            orig_y = kpts_y * scale_y + y1
+            
+            scores_x = np.max(simcc_x[0], axis=1)
+            
+            kpts_2d = np.stack([orig_x, orig_y], axis=1)
+            kpts_3d = np.stack([orig_x, orig_y, np.zeros_like(orig_x)], axis=1)
+            
+            # Detailed debug for bottleneck analysis
+            # print(f"DEBUG | Det: {det_ms:.1f}ms | Pre: {t_pre:.1f}ms | ONNX: {t_onnx_1:.1f}ms")
+            
+            return self._pack_results(kpts_3d, kpts_2d, scores_x, frame.shape)
+            
+        except Exception as e:
+            logger.error(f"ONNX Inference Error: {e}")
+            traceback.print_exc()
+            return None
+
+
+    def _pack_results(self, kpts_3d, kpts_2d, scores, img_shape):
+        h_img, w_img = img_shape[:2]
+        num_kpts = kpts_3d.shape[0]
+        
+        # ID to Name (Fallback)
+        # If PyTorch model loaded, use its metadata, else standard COCO-Wholebody
+        joints: List[PoseJoint] = []
+        
+        for index in range(num_kpts):
+            name = JOINT_NAMES[index] if index < len(JOINT_NAMES) else f"kpt_{index}"
+            
+            x3d, y3d, z3d = kpts_3d[index]
+            px, py = kpts_2d[index]
+            c = float(scores[index]) if scores is not None else 0.0
+            
+            joints.append({
+                "name": str(name), 
+                "x": float(x3d),
+                "y": float(y3d),
+                "z": float(z3d),
+                "c": c,
+                "px": float(px / w_img),
+                "py": float(py / h_img)
+            })
+
+        return {
+            "t": 0.0, 
+            "space": "camera",
+            "joints": joints,
+        }

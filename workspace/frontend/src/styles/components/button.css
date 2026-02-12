@@ -1,0 +1,43 @@
+/* Premium Button Component */
+
+.btn-commencer {
+  width: 100%;
+  background: var(--mint-leaf);
+  color: var(--black);
+  border: none;
+  border-radius: var(--radius-inner);
+  padding: 16px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px 0 rgba(0, 204, 153, 0.39);
+}
+
+.btn-commencer:hover {
+  background: #00e6ad;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 204, 153, 0.5);
+}
+
+.btn-commencer:active {
+  transform: translateY(1px);
+}
+
+.btn-icon-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}

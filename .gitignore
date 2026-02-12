@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/workspace/frontend/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -10,15 +11,20 @@
 !.yarn/releases
 !.yarn/versions
 
+.pytest_cache
+__pycache__
+
 # testing
 /coverage
 
 # next.js
 /.next/
 /out/
+/workspace/frontend/.next/
 
 # production
 /build
+/workspace/frontend/out/
 
 # misc
 .DS_Store
@@ -33,9 +39,22 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# python
+/workspace/backend/.venv
+/workspace/backend/__pycache__
+/workspace/backend/.mmpose
+/workspace/backend/.mim
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+.agent
+*.onnx
+*.pth
+
+mmpose
