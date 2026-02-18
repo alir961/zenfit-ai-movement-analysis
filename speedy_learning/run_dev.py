@@ -21,9 +21,6 @@ def _pick_port(host: str, base_port: int, max_tries: int = 20) -> int:
 
 
 if __name__ == "__main__":
-    
-    #TODO: create clean /runs file functions we need to clean when we launch and keep one sessions we will save it manual if needed
-    
     root = Path(__file__).resolve().parent
     host = "127.0.0.1"
     port = _pick_port(host, 8000)

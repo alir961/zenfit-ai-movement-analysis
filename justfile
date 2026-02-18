@@ -2,6 +2,8 @@ set shell := ["powershell", "-NoProfile", "-Command"]
 
 venv_dir := "workspace/backend/.venv"
 py := venv_dir + "/Scripts/python.exe"
+speedy_venv_dir := "speedy_learning/.venv"
+speedy_py := speedy_venv_dir + "/Scripts/python.exe"
 
 # ==============================================================================
 # ENVIRONMENT SETUP & DIAGNOSTICS (BACKEND)
@@ -110,10 +112,33 @@ build:
 # SPEEDY LEARNING (ONNX CUDA/cuDNN bootstrap)
 # ==============================================================================
 
+# Create dedicated speedy_learning venv
+speedy-venv-create:
+  if (!(Test-Path "{{speedy_venv_dir}}")) { python -m venv "{{speedy_venv_dir}}" }
+  {{speedy_py}} -m pip install --upgrade pip setuptools wheel
+
+# Install speedy dependencies from lock file
+speedy-venv-install:
+  {{speedy_py}} -m pip install -r speedy_learning/backend/requirements.txt
+
+# Show interpreter and ONNXRuntime providers for speedy venv
+speedy-venv-doctor:
+  {{speedy_py}} -c "import sys; print(sys.executable); print('prefix=', sys.prefix)"
+  {{speedy_py}} -m pip --version
+  {{speedy_py}} -c "import onnxruntime as ort; print(ort.get_available_providers())"
+
+# Freeze dedicated speedy venv into lock file
+speedy-venv-freeze:
+  {{speedy_py}} -m pip freeze > speedy_learning/backend/requirements.txt
+
 # Diagnostic + install deps CUDA/cuDNN Python for ONNXRuntime.
 speedy-ort-fix:
-  ./scripts/speedy-ort-cuda.ps1 -PythonExe "{{py}}" -InstallDeps -DoctorOnly
+  ./scripts/speedy-ort-cuda.ps1 -PythonExe "{{speedy_py}}" -InstallDeps -DoctorOnly
 
 # Launch speedy_learning dev server with CUDA/cuDNN DLL PATH bootstrap.
 speedy-dev:
-  ./scripts/speedy-ort-cuda.ps1 -PythonExe "{{py}}" -RunScript "speedy_learning/run_dev.py"
+  ./scripts/speedy-ort-cuda.ps1 -PythonExe "{{speedy_py}}" -RunScript "speedy_learning/run_dev.py"
+
+# Run speedy regression script in dedicated venv
+speedy-test:
+  {{speedy_py}} speedy_learning/run_test.py

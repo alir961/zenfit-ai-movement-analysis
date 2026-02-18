@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import os
 import time
 import uuid
 from pathlib import Path
@@ -18,6 +19,8 @@ from .inference_rtmw3d import RTMW3DEstimator
 from .inference_yolox import YOLOXDetector
 from .utils_camera import build_camera_state_fallback, decode_jpeg, parse_camera_state_form
 from .zenfit_state import Zenfit
+
+import dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
 LOGS_DIR = ROOT / "logs"
@@ -38,20 +41,25 @@ app.add_middleware(
 app.mount("/frontend", StaticFiles(directory=ROOT / "frontend"), name="frontend")
 app.mount("/docs_static", StaticFiles(directory=ROOT / "docs"), name="docs_static")
 
-import dotenv
 dotenv.load_dotenv()
+
+LOG_LEVEL_NAME = os.getenv("ZENFIT_LOG_LEVEL", "INFO").strip().upper()
+LOG_LEVEL = getattr(logging, LOG_LEVEL_NAME, logging.INFO)
+VERBOSE_CAMERA = os.getenv("ZENFIT_VERBOSE_CAMERA", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 detector = YOLOXDetector()
 pose_estimator = RTMW3DEstimator()
 camera_stream_manager = CameraStreamManager(max_buffer=8)
 logger = logging.getLogger("zenfit.server")
+logger.setLevel(LOG_LEVEL)
 if not logger.handlers:
-    logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
     file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
     file_handler.setFormatter(formatter)
+    file_handler.setLevel(LOG_LEVEL)
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
+    stream_handler.setLevel(LOG_LEVEL)
     logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
     logger.propagate = False
@@ -110,9 +118,10 @@ async def process(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     fh, fw = frame.shape[:2]
-    logger.debug("decoded frame shape=%sx%s bytes=%s", fw, fh, len(payload_bytes))
-    logger.debug("Camera State (raw): %s", camera_state)
-    logger.debug("Camera scalar form fields width=%s height=%s fps=%s", camera_width, camera_height, camera_fps)
+    logger.info("decoded frame shape=%sx%s bytes=%s", fw, fh, len(payload_bytes))
+    if VERBOSE_CAMERA:
+        logger.info("Camera State (raw): %s", camera_state)
+        logger.info("Camera scalar form fields width=%s height=%s fps=%s", camera_width, camera_height, camera_fps)
     state = parse_camera_state_form(camera_state)
     if state is None:
         state = build_camera_state_fallback(
@@ -122,8 +131,10 @@ async def process(
             camera_height=camera_height,
             camera_fps=camera_fps,
         )
-        logger.debug("Camera State (fallback-built): %s", state.model_dump())
-    logger.debug("Camera State (parsed): %s", state.model_dump() if state else None)
+        if VERBOSE_CAMERA:
+            logger.info("Camera State (fallback-built): %s", state.model_dump())
+    if VERBOSE_CAMERA:
+        logger.info("Camera State (parsed): %s", state.model_dump() if state else None)
 
     stream_state = await camera_stream_manager.snapshot_state()
     stream_fps_target =  camera_stream_manager.limit_fps

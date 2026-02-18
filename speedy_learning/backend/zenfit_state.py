@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -49,14 +50,14 @@ class Zenfit:
         self.logger = logger
         self.debug_dir = debug_dir
         self.debug_dir.mkdir(parents=True, exist_ok=True)
-        self.debug_enabled = os.getenv("ZENFIT_DEBUG_STAGES", "1").strip().lower() in {"1", "true", "yes", "on"}
+        self.debug_enabled = os.getenv("ZENFIT_DEBUG_STAGES", "0").strip().lower() in {"1", "true", "yes", "on"}
         self.last_camera_state: Optional[CameraState] = None
         self.last_camera_debug: Dict[str, Any] = {}
         self._gaussian_by_dim: Dict[int, OnlineGaussian] = {}
 
     def _log_debug(self, message: str, *args: Any) -> None:
         try:
-            if self.logger and hasattr(self.logger, "debug"):
+            if self.logger and hasattr(self.logger, "debug") and self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(message, *args)
         except Exception:
             pass

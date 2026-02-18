@@ -39,6 +39,8 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+/workspace/
+
 # python
 /workspace/backend/.venv
 /workspace/backend/__pycache__
@@ -47,6 +49,11 @@ yarn-error.log*
 /speedy_learning/.venv
 /speedy_learning/runs/*
 !/speedy_learning/runs/.gitkeep
+/speedy_learning/logs/*.log
+/speedy_learning/logs/debug_frames/*
+
+/datasets/training_outputs/*
+!/datasets/training_outputs/best_model.pt
 
 # vercel
 .vercel

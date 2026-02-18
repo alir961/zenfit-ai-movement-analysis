@@ -1,5 +1,5 @@
 param(
-    [string]$PythonExe = "workspace/backend/.venv/Scripts/python.exe",
+    [string]$PythonExe = "speedy_learning/.venv/Scripts/python.exe",
     [switch]$InstallDeps,
     [switch]$DoctorOnly,
     [string]$RunScript = "speedy_learning/run_dev.py"
