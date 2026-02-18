@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ExerciseState } from "./types/exercise";
+import type { ExerciseState, ExerciseName } from "./types/exercise";
 import type { PoseFrame, NormalizationParams } from "./types/pose";
 import type { PoseMetrics } from "./types/metrics";
 
@@ -8,6 +8,7 @@ export type SessionState = "running" | "paused" | "no_input";
 interface PoseState {
   socketConnected: boolean;
   sessionState: SessionState;
+  selectedExercise: Exclude<ExerciseName, "none">;
   rawPose: PoseFrame | null;
   normalizedPose: PoseFrame | null;
   normalizationParams: NormalizationParams | null;
@@ -18,6 +19,7 @@ interface PoseState {
 
   setSocketConnected: (connected: boolean) => void;
   setSessionState: (state: SessionState) => void;
+  setSelectedExercise: (name: Exclude<ExerciseName, "none">) => void;
   setRawPose: (frame: PoseFrame | null) => void;
   setNormalizedPose: (frame: PoseFrame | null, params: NormalizationParams | null) => void;
   setMetrics: (metrics: PoseMetrics | null) => void;
@@ -42,6 +44,7 @@ const defaultExercise: ExerciseState = {
 export const usePoseStore = create<PoseState>((set) => ({
   socketConnected: false,
   sessionState: "no_input",
+  selectedExercise: "squat",
   rawPose: null,
   normalizedPose: null,
   normalizationParams: null,
@@ -51,8 +54,9 @@ export const usePoseStore = create<PoseState>((set) => ({
   lastUpdated: null,
 
   setSocketConnected: (connected) =>
-    set({ socketConnected: connected, sessionState: connected ? "paused" : "no_input" }),
+    set({ socketConnected: connected }),
   setSessionState: (state) => set({ sessionState: state }),
+  setSelectedExercise: (name) => set({ selectedExercise: name }),
   setRawPose: (frame) => set({ rawPose: frame, lastUpdated: Date.now() }),
   setNormalizedPose: (frame, params) =>
     set({ normalizedPose: frame, normalizationParams: params, lastUpdated: Date.now() }),
@@ -70,6 +74,7 @@ export const usePoseStore = create<PoseState>((set) => ({
   reset: () =>
     set({
       sessionState: "no_input",
+      selectedExercise: "squat",
       rawPose: null,
       normalizedPose: null,
       normalizationParams: null,

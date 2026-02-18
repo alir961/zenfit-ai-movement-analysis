@@ -10,6 +10,7 @@ import { LiveDetectionPanel } from "@/components/coach/LiveDetectionPanel";
 import { usePoseSocket } from "@/hooks/usePoseSocket";
 import { usePoseStream } from "@/hooks/usePoseStream";
 import { usePoseStore } from "@/lib/poseStore";
+import { ExerciseSelector } from "@/components/coach/ExerciseSelector";
 
 const AvatarCanvas = dynamic(() => import("@/components/avatar/AvatarCanvas").then((mod) => mod.AvatarCanvas), {
   ssr: false,
@@ -25,21 +26,12 @@ export default function HomePage() {
 
   usePoseStream(socket, videoRef, sessionState === "running");
 
-  const coachMessage = useMemo(() => {
-    if (!socketConnected) return "L'ombre précède le mouvement. Connexion...";
-    if (sessionState === "paused" || sessionState === "no_input") return "Prêt pour l'équilibre ?";
-    if (exercise.name === "squat") return "Pousse sur tes talons.";
-    if (exercise.name === "push_up") return "Garde ton centre solide.";
-    if (exercise.name === "burpee") return "Explose vers le haut.";
-    return "Respire. Bouge avec intention.";
-  }, [exercise.name, sessionState, socketConnected]);
+  const handleStart = () => {
+    setSessionState("running");
+  };
 
-  const handleToggle = () => {
-    if (sessionState === "running") {
-      setSessionState("paused");
-    } else {
-      setSessionState("running");
-    }
+  const handleStop = () => {
+    setSessionState("paused");
   };
 
   return (
@@ -52,52 +44,78 @@ export default function HomePage() {
           <div className="display-large tracking-widest">
             ZEN<span className="text-mint">FIT</span>
           </div>
-          <div className="nav-item-pill">
-            🔊
-          </div>
         </header>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-12">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1 }}
-            className="text-center"
-          >
-            <h1 className="harmonie-title glow-text">調和</h1>
-            <p className="harmonie-subtitle">Harmonie & Mouvement</p>
-          </motion.div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 w-full max-w-sm mx-auto">
 
-          <div className="w-full relative glass-card neon-border group animate-neon">
-            <div className="absolute inset-0 bg-blur-accent -top-10 -left-10 bg-mint-leaf"></div>
-            
-            <div className="flex flex-col gap-6 relative z-10">
-              <div className="flex items-center gap-4">
-                <div className="btn-icon-circle text-mint">👤</div>
-                <p className="text-sm font-medium text-lavender">
-                  {coachMessage}
-                </p>
-              </div>
-
-              <button 
-                className="btn-commencer"
-                onClick={handleToggle}
-              >
-                {sessionState === "running" ? "PAUSE" : "COMMENCER"}
-                <span className="ml-2">→</span>
-              </button>
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {sessionState === "running" && (
+          <AnimatePresence mode="wait">
+            {sessionState !== "running" ? (
               <motion.div
+                key="landing"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex flex-col items-center gap-12 w-full"
+              >
+                <div className="text-center">
+                  <h1 className="harmonie-title glow-text">調和</h1>
+                  <p className="harmonie-subtitle">Harmonie & Mouvement</p>
+                </div>
+
+                <div className="w-full relative glass-card neon-border group animate-neon">
+                  <div className="absolute inset-0 bg-blur-accent -top-10 -left-10 bg-mint-leaf"></div>
+
+                  <div className="flex flex-col gap-6 relative z-10">
+                    <div className="flex items-center gap-4">
+                      <div className="btn-icon-circle text-mint">👤</div>
+                      <p className="text-sm font-medium text-lavender">
+                        Prêt pour l'équilibre ?
+                      </p>
+                    </div>
+
+                    <button
+                      className="btn-commencer"
+                      onClick={handleStart}
+                    >
+                      COMMENCER
+                      <span className="ml-2">→</span>
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="session"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
-                className="w-full flex flex-col gap-6"
+                className="w-full flex flex-col gap-4"
               >
+                {/* Camera Feed Card */}
+                <div className="glass-card neon-border p-0 overflow-hidden relative aspect-[3/4] w-full bg-black">
+                  <CameraFeed
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Overlay Status */}
+                  <div className="absolute top-4 right-4 nav-item-pill bg-black/50 backdrop-blur-md border-none">
+                    <span className="text-mint animate-pulse">●</span> LIVE
+                  </div>
+                </div>
+
+                {/* Exercise Selection */}
+                <ExerciseSelector />
+
+                {/* Live Stats */}
                 <LiveDetectionPanel />
+
+                {/* Stop Button */}
+                <button
+                  className="btn-stop"
+                  onClick={handleStop}
+                >
+                  ARRÊTER LA SESSION
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -113,15 +131,11 @@ export default function HomePage() {
           </Link>
           <div className="flex gap-4">
             <div className="nav-item-pill text-[9px] opacity-50">{exercise.repCount} REPS</div>
-            <div className={`nav-item-pill text-[9px] ${socketConnected ? "text-mint" : "text-red-500"}`}>
-              {socketConnected ? "LIVE" : "OFFLINE"}
-            </div>
           </div>
         </footer>
 
-        {/* Camera/Avatar Hidden background processing */}
+        {/* Hidden Avatar Worker */}
         <div className="hidden">
-          <CameraFeed ref={videoRef} />
           <AvatarCanvas />
         </div>
       </div>
