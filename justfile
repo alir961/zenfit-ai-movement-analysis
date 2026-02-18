@@ -121,6 +121,10 @@ speedy-venv-create:
 speedy-venv-install:
   {{speedy_py}} -m pip install -r speedy_learning/backend/requirements.txt
 
+# Ensure required ONNX models for speedy_learning are present in speedy_learning/models
+speedy-onnx-prepare:
+  ./scripts/speedy-prepare-onnx.ps1 -PythonExe "{{speedy_py}}"
+
 # Show interpreter and ONNXRuntime providers for speedy venv
 speedy-venv-doctor:
   {{speedy_py}} -c "import sys; print(sys.executable); print('prefix=', sys.prefix)"

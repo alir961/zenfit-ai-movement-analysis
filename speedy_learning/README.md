@@ -1,35 +1,108 @@
-# Speedy Learning Lab
+﻿# Speedy Learning Lab
 
-Standalone lab pour `viewer.html` + pipeline YOLOX/RTMW3D, avec runtime local piloté par `just`.
+Standalone local lab for:
+- 3D viewer and skeleton debug (`speedy_learning/viewer.html`)
+- YOLOX + RTMW3D ONNX inference (`speedy_learning/backend`)
+- webcam stream + live overlays
 
-## Prérequis
+This file documents exactly what to do after a fresh `git clone`.
+
+## Scope
+- Uses a dedicated virtual environment: `speedy_learning/.venv`
+- Uses `just` as the main command runner
+- Can run with CUDA or CPU fallback
+
+## Prerequisites
 - Windows + PowerShell
 - Python 3.10+
-- `just` installé
-- GPU CUDA optionnel (fallback CPU automatique)
+- `just` installed and available in PATH
+- Optional NVIDIA GPU with CUDA runtime
 
-## Quickstart
+## Full setup after clone
+
+Run from repository root:
+
 ```powershell
 just speedy-venv-create
 just speedy-venv-install
+just speedy-onnx-prepare
 just speedy-ort-fix
 just speedy-dev
 ```
 
-Le serveur démarre sur `http://127.0.0.1:8000` (ou port suivant libre).
+What each step does:
 
-## Validation rapide
-1. Ouvrir `http://127.0.0.1:8000/health`
-2. Vérifier `providers` (CUDA/CPU)
-3. Vérifier les logs dans `speedy_learning/logs/server.log`
+1. `speedy-venv-create`
+- Creates `speedy_learning/.venv`
+- Upgrades pip/setuptools/wheel inside that venv
 
-## Variables d'environnement runtime
-- `ZENFIT_LOG_LEVEL` (default: `INFO`)
-- `ZENFIT_DEBUG_STAGES` (default: `0`)
-- `ZENFIT_VERBOSE_CAMERA` (default: `0`)
-- `ZENFIT_ORT_CPU_ONLY` (auto géré par le bootstrap si CUDA invalide)
+2. `speedy-venv-install`
+- Installs all locked dependencies from:
+  - `speedy_learning/backend/requirements.txt`
 
-Exemple debug:
+3. `speedy-onnx-prepare`
+- Ensures required ONNX files exist in:
+  - `speedy_learning/models/yolox_s_humanart_fp32.onnx`
+  - `speedy_learning/models/rtmw3d_l_fp32.onnx`
+- If missing, copies from `workspace/backend/models/onnx`
+- If still missing, tries artifact preparation script
+- Validates both models with ONNX Runtime (CPU session)
+
+4. `speedy-ort-fix`
+- Installs/checks CUDA-related Python runtime packages
+- Adds DLL search dirs for current process
+- Prints interpreter path and providers
+- Enables CPU fallback (`ZENFIT_ORT_CPU_ONLY=1`) if CUDA DLL chain is not usable
+
+5. `speedy-dev`
+- Starts FastAPI + static frontend
+- Uses the same `speedy_learning/.venv`
+- Typical URL: `http://127.0.0.1:8000`
+
+## Quick validation checklist
+
+1. Verify venv and providers:
+```powershell
+just speedy-venv-doctor
+```
+
+Expected:
+- `sys.executable` points to `speedy_learning/.venv/Scripts/python.exe`
+- ONNX providers include at least `CPUExecutionProvider`
+
+2. Verify ONNX paths resolved by Speedy:
+```powershell
+speedy_learning/.venv/Scripts/python.exe -c "from speedy_learning.backend.inference_yolox import YOLOXDetector; from speedy_learning.backend.inference_rtmw3d import RTMW3DEstimator; d=YOLOXDetector(); p=RTMW3DEstimator(); print(d.model_path); print(p.model_path)"
+```
+
+Expected paths:
+- `speedy_learning/models/yolox_s_humanart_fp32.onnx`
+- `speedy_learning/models/rtmw3d_l_fp32.onnx`
+
+3. Verify server health:
+- Open `http://127.0.0.1:8000/health`
+- Check:
+  - `"ok": true`
+  - provider list
+  - detector and pose model paths
+
+## Main just commands
+- `just speedy-venv-create`
+- `just speedy-venv-install`
+- `just speedy-venv-doctor`
+- `just speedy-venv-freeze`
+- `just speedy-onnx-prepare`
+- `just speedy-ort-fix`
+- `just speedy-dev`
+- `just speedy-test`
+
+## Runtime environment variables
+- `ZENFIT_LOG_LEVEL` (default `INFO`)
+- `ZENFIT_DEBUG_STAGES` (default `0`)
+- `ZENFIT_VERBOSE_CAMERA` (default `0`)
+- `ZENFIT_ORT_CPU_ONLY` (set automatically by bootstrap if needed)
+
+Example debug run:
 ```powershell
 $env:ZENFIT_LOG_LEVEL="DEBUG"
 $env:ZENFIT_DEBUG_STAGES="1"
@@ -37,89 +110,45 @@ $env:ZENFIT_VERBOSE_CAMERA="1"
 just speedy-dev
 ```
 
-## Maintenance du lock requirements
-Le lock officiel est:
-- `speedy_learning/backend/requirements.txt`
+## CUDA troubleshooting
 
-Après une mise à jour dépendances:
+If you see `cudnn64_9.dll` or CUDA provider errors:
+
+1. Run:
+```powershell
+just speedy-ort-fix
+```
+
+2. Confirm printed Python path is `speedy_learning/.venv`
+
+3. Check provider output again:
+```powershell
+just speedy-venv-doctor
+```
+
+4. If CUDA still fails, CPU fallback is expected and runtime should still work.
+
+## Lockfile and dependency maintenance
+- Official lockfile:
+  - `speedy_learning/backend/requirements.txt`
+
+After dependency updates, regenerate lock:
 ```powershell
 just speedy-venv-freeze
 ```
 
-## Dépannage CUDA (cudnn64_9.dll)
-Si `cudnn64_9.dll` ne peut pas être chargé:
-1. Lancer `just speedy-ort-fix`
-2. Vérifier Python/prefix affichés (doivent pointer vers `speedy_learning/.venv`)
-3. Le script active automatiquement `ZENFIT_ORT_CPU_ONLY=1` pour éviter le flood d'erreurs et garder le runtime fonctionnel.
+## Training notes
+Training scripts are available, but not required to run the viewer/inference lab.
 
-## Outils diagnostics (conservés)
-Les scripts debug backend (`_debug_*`, dataset checks) sont conservés mais ne font pas partie du chemin runtime principal.
-
-## Dataset training (pose_raw17_transformed)
-Pipeline recommande:
-1. Parser les videos en JSONL + samples
-2. Entrainer en CUDA avec `train_cuda_live.py`
-3. Charger `best_model.pt` pour inference/eval
-
-### 1) Construire les donnees
-Commande (depuis la racine repo):
+Data prep example:
 ```powershell
 python speedy_learning/parser_dataset_pytorch.py --datasets-dir datasets --output-dir datasets --stride 1 --sequence-len 120 --sequence-step 30 --val-ratio 0.2
 ```
 
-Sorties generees:
-- `datasets/videos/*.jsonl`
-- `datasets/samples/train.npz`
-- `datasets/samples/val.npz`
-- `datasets/samples/index_train.json`
-- `datasets/samples/index_val.json`
-- `datasets/manifest.json`
-- `datasets/stats.json`
-
-### 2) Entrainer le modele (full CUDA)
-Commande standard:
+Training example:
 ```powershell
 python speedy_learning/train_cuda_live.py
 ```
 
-La version actuelle inclut:
-- AMP CUDA
-- Dropout configurable (`--dropout`)
-- Label smoothing (`--label-smoothing`)
-- LR scheduler warmup + cosine (`--scheduler cosine`)
-- Eval live + plot
-
-Artefacts training:
+Best checkpoint expected path:
 - `datasets/training_outputs/best_model.pt`
-- `datasets/training_outputs/last_model.pt`
-- `datasets/training_outputs/checkpoint_epoch_*.pt`
-- `datasets/training_outputs/live_metrics.png`
-- `datasets/training_outputs/live_metrics_history.json`
-
-Exemple run court:
-```powershell
-python speedy_learning/train_cuda_live.py --epochs 10 --batch-size 4 --eval-every-batches 2
-```
-
-### 3) Charger les poids
-Exemple minimal:
-```python
-from pathlib import Path
-import torch
-from speedy_learning.models.movement_classification import GraphBiasedSTTransformer, ModelCfg
-from speedy_learning.backend.skeleton_map import RAW17_EDGES
-
-ckpt_path = Path("datasets/training_outputs/best_model.pt")
-ckpt = torch.load(ckpt_path, map_location="cuda" if torch.cuda.is_available() else "cpu")
-
-cfg = ModelCfg(**ckpt["cfg"])
-model = GraphBiasedSTTransformer(
-    num_joints=17,
-    edges=[(int(a), int(b)) for a, b in RAW17_EDGES],
-    cfg=cfg,
-)
-model.load_state_dict(ckpt["model_state_dict"])
-model.eval()
-```
-
-`ckpt["label_map"]` donne le mapping classes (`jumping_jacks`, `push_up`, `squat`).
