@@ -39,8 +39,6 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-/workspace/
-
 # python
 /workspace/backend/.venv
 /workspace/backend/__pycache__
