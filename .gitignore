@@ -44,6 +44,9 @@ yarn-error.log*
 /workspace/backend/__pycache__
 /workspace/backend/.mmpose
 /workspace/backend/.mim
+/speedy_learning/.venv
+/speedy_learning/runs/*
+!/speedy_learning/runs/.gitkeep
 
 # vercel
 .vercel

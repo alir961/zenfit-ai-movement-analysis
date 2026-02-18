@@ -1,0 +1,222 @@
+﻿<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Speedy Learning Labs Viewer</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #0b0b0f;
+      color: #eaeaf2;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    #ui {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      width: 640px;
+      max-height: calc(100% - 24px);
+      background: rgba(18, 18, 28, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 10px;
+      padding: 12px;
+      overflow: auto;
+      backdrop-filter: blur(8px);
+      z-index: 30;
+    }
+
+    #drop {
+      border: 1px dashed rgba(255, 255, 255, 0.25);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .small { font-size: 12px; opacity: 0.88; }
+    .row { display: flex; gap: 8px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+
+    input, select, button {
+      background: #101019;
+      color: #eaeaf2;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 3px 6px;
+    }
+
+    button { cursor: pointer; }
+    label { user-select: none; font-size: 12px; }
+
+    #tree {
+      font-size: 12px;
+      line-height: 1.28;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.18);
+      max-height: 40vh;
+      overflow: auto;
+    }
+
+    .bone-line { white-space: pre; cursor: pointer; border-radius: 4px; padding: 1px 3px; }
+    .bone-line:hover { background: rgba(255, 255, 255, 0.08); }
+    .bone-line.sel { background: rgba(0, 229, 255, 0.2); outline: 1px solid rgba(0, 229, 255, 0.45); }
+    .warn { color: #ffd166; }
+
+    #camPane {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 20vw;
+      height: 20vh;
+      min-width: 160px;
+      min-height: 90px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 40;
+      background: #050509;
+    }
+
+    #camProcessedPane {
+      position: absolute;
+      top: calc(12px + 20vh + 10px);
+      right: 12px;
+      width: 20vw;
+      height: 20vh;
+      min-width: 160px;
+      min-height: 90px;
+      border: 1px solid rgba(127, 255, 127, 0.35);
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 40;
+      background: #030706;
+    }
+
+    #camPreview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scaleX(-1);
+    }
+
+    #camProcessedPreview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #payloadMeta {
+      margin-top: 8px;
+      margin-bottom: 6px;
+    }
+
+    #payloadDebug {
+      font-size: 11px;
+      line-height: 1.25;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.22);
+      max-height: 24vh;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.182.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.182.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="camPane">
+    <video id="camPreview" autoplay playsinline muted></video>
+  </div>
+  <div id="camProcessedPane">
+    <img id="camProcessedPreview" alt="processed stream" />
+  </div>
+
+  <div id="ui">
+    <div id="drop">
+      <div><b>GLB / GLTF</b> : glisse-depose ton fichier ici</div>
+      <div class="small">Ou modifie <code>DEFAULT_URL</code> dans <code>frontend/renderer.js</code>.</div>
+    </div>
+
+    <div class="small" style="margin-bottom: 8px;">Raccourcis: molette zoom, clic gauche orbite, clic droit pan.</div>
+
+    <div class="row">
+      <label for="skelSelect"><b>Mesh:</b></label>
+      <select id="skelSelect" style="flex: 1; min-width: 0;"></select>
+      <label><input id="toggleSkeleton" type="checkbox" checked /> skeleton</label>
+      <label><input id="toggleJoints" type="checkbox" checked /> joints</label>
+      <label><input id="toggleAxes" type="checkbox" /> axes</label>
+      <label><input id="toggleAngles" type="checkbox" checked /> angles</label>
+    </div>
+
+    <div class="row">
+      <button id="btnTPose">TPose</button>
+      <button id="btnResetBone">Reset Selected Bone</button>
+      <label>Mode:
+        <select id="tcMode">
+          <option value="rotate" selected>rotate</option>
+          <option value="translate">translate</option>
+        </select>
+      </label>
+      <label>Space:
+        <select id="tcSpace">
+          <option value="local" selected>local</option>
+          <option value="world">world</option>
+        </select>
+      </label>
+      <span id="modeWarn" class="small warn" style="display:none;">translate peut deformer le skin.</span>
+    </div>
+
+    <div class="row">
+      <input id="endpoint" type="text" value="/process" style="width: 110px;" />
+      <button id="btnProcess">Process</button>
+      <button id="btnStartStream">Start Stream</button>
+      <button id="btnStopStream">Stop Stream</button>
+      <label>FPS:
+        <select id="streamFps">
+          <option value="10">10</option>
+          <option value="15" selected>15</option>
+          <option value="20">20</option>
+          <option value="30">30</option>
+        </select>
+      </label>
+      <button id="btnSavePayload">Save Frame</button>
+      <label><input id="toggleRaw17" type="checkbox" checked /> raw17</label>
+      <label><input id="toggleRaw17Normalized" type="checkbox" checked /> raw17_normalized</label>
+      <label>Norm:
+        <select id="normalizedMode">
+          <option value="easy" selected>easy</option>
+          <option value="full">full</option>
+          <option value="transformed">transformed</option>
+        </select>
+      </label>
+      <label><input id="toggleMapped" type="checkbox" checked /> mapped_humanoid</label>
+      <span id="status" class="small">idle</span>
+    </div>
+    <div class="small" id="streamStats">stream: idle</div>
+
+    <div class="small" id="meta" style="margin: 8px 0 6px;">(aucun modele charge)</div>
+    <div id="tree"></div>
+
+    <div id="payloadMeta" class="small">No payload yet.</div>
+    <pre id="payloadDebug"></pre>
+  </div>
+
+  <script type="module" src="./frontend/main.js"></script>
+</body>
+</html>

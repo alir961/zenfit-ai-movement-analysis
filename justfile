@@ -105,3 +105,15 @@ test:
 # Build global (Frontend + Backend)
 build:
   ./scripts/build.ps1
+
+# ==============================================================================
+# SPEEDY LEARNING (ONNX CUDA/cuDNN bootstrap)
+# ==============================================================================
+
+# Diagnostic + install deps CUDA/cuDNN Python for ONNXRuntime.
+speedy-ort-fix:
+  ./scripts/speedy-ort-cuda.ps1 -PythonExe "{{py}}" -InstallDeps -DoctorOnly
+
+# Launch speedy_learning dev server with CUDA/cuDNN DLL PATH bootstrap.
+speedy-dev:
+  ./scripts/speedy-ort-cuda.ps1 -PythonExe "{{py}}" -RunScript "speedy_learning/run_dev.py"
