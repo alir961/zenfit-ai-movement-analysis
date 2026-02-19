@@ -23,8 +23,16 @@ This file documents exactly what to do after a fresh `git clone`.
 Run from repository root:
 
 ```powershell
+just speedy-install
+just speedy-dev
+```
+
+Equivalent detailed sequence:
+
+```powershell
 just speedy-venv-create
 just speedy-venv-install
+just speedy-third-party-ensure
 just speedy-onnx-prepare
 just speedy-ort-fix
 just speedy-dev
@@ -40,21 +48,24 @@ What each step does:
 - Installs all locked dependencies from:
   - `speedy_learning/backend/requirements.txt`
 
-3. `speedy-onnx-prepare`
+3. `speedy-third-party-ensure`
+- Clones/updates `third_party/mmpose` automatically on `main`
+- Validates required mmpose folders are present
+
+4. `speedy-onnx-prepare`
 - Ensures required ONNX files exist in:
   - `speedy_learning/models/yolox_s_humanart_fp32.onnx`
   - `speedy_learning/models/rtmw3d_l_fp32.onnx`
-- If missing, copies from `workspace/backend/models/onnx`
-- If still missing, tries artifact preparation script
+- If missing, generates them automatically from mmpose configs/checkpoints
 - Validates both models with ONNX Runtime (CPU session)
 
-4. `speedy-ort-fix`
+5. `speedy-ort-fix`
 - Installs/checks CUDA-related Python runtime packages
 - Adds DLL search dirs for current process
 - Prints interpreter path and providers
 - Enables CPU fallback (`ZENFIT_ORT_CPU_ONLY=1`) if CUDA DLL chain is not usable
 
-5. `speedy-dev`
+6. `speedy-dev`
 - Starts FastAPI + static frontend
 - Uses the same `speedy_learning/.venv`
 - Typical URL: `http://127.0.0.1:8000`
@@ -89,10 +100,12 @@ Expected paths:
 ## Main just commands
 - `just speedy-venv-create`
 - `just speedy-venv-install`
+- `just speedy-third-party-ensure`
 - `just speedy-venv-doctor`
 - `just speedy-venv-freeze`
 - `just speedy-onnx-prepare`
 - `just speedy-ort-fix`
+- `just speedy-install`
 - `just speedy-dev`
 - `just speedy-test`
 

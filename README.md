@@ -16,8 +16,16 @@ Ce repo contient plusieurs espaces, mais le workflow principal actuel est `speed
 Depuis la racine du repo:
 
 ```powershell
+just speedy-install
+```
+
+Ou en detail:
+
+```powershell
 just speedy-venv-create
 just speedy-venv-install
+just speedy-third-party-ensure
+just speedy-onnx-prepare
 just speedy-ort-fix
 ```
 

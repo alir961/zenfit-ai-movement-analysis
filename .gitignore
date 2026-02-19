@@ -51,7 +51,9 @@ app
 /speedy_learning/runs/*
 !/speedy_learning/runs/.gitkeep
 /speedy_learning/logs/*.log
+/speedy_learning/logs/install_report.json
 /speedy_learning/logs/debug_frames/*
+/third_party/
 
 /datasets/training_outputs/*
 !/datasets/training_outputs/best_model.pt

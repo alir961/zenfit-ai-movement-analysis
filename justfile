@@ -42,7 +42,7 @@ build:
 
 speedy-venv-create:
   {{ if os_family() == "windows" { "if (!(Test-Path \"" + speedy_venv_dir + "\")) { python -m venv \"" + speedy_venv_dir + "\" }" } else { "if [ ! -d \"" + speedy_venv_dir + "\" ]; then python3 -m venv \"" + speedy_venv_dir + "\"; fi" } }}
-  {{ if os_family() == "windows" { speedy_py + " -m pip install --upgrade pip setuptools wheel" } else { speedy_venv_dir + "/bin/python -m pip install --upgrade pip setuptools wheel" } }}
+  {{ if os_family() == "windows" { speedy_py + " -m pip install --upgrade pip wheel setuptools==60.2.0" } else { speedy_venv_dir + "/bin/python -m pip install --upgrade pip wheel setuptools==60.2.0" } }}
 
 speedy-venv-install:
   {{ if os_family() == "windows" {
@@ -57,7 +57,11 @@ speedy-venv-install:
     "if (-not $ok) { throw \"speedy-venv-install failed after $attempts attempts\" }"
   } else { speedy_venv_dir + "/bin/python -m pip install --extra-index-url https://download.pytorch.org/whl/cu121 -r speedy_learning/backend/requirements.txt" } }}
 
+speedy-third-party-ensure:
+  {{ if os_family() == "windows" { "./scripts/speedy-third-party-ensure.ps1" } else { "./scripts/speedy-third-party-ensure.sh" } }}
+
 speedy-onnx-prepare:
+  just speedy-third-party-ensure
   {{ if os_family() == "windows" { "./scripts/speedy-prepare-onnx.ps1 -PythonExe \"" + speedy_py + "\"" } else { "PYTHON_EXE=" + speedy_venv_dir + "/bin/python ./scripts/speedy-prepare-onnx.sh" } }}
 
 speedy-venv-doctor:
@@ -72,7 +76,17 @@ speedy-ort-fix:
   {{ if os_family() == "windows" { "./scripts/speedy-ort-cuda.ps1 -PythonExe \"" + speedy_py + "\" -InstallDeps -DoctorOnly" } else { "PYTHON_EXE=" + speedy_venv_dir + "/bin/python INSTALL_DEPS=1 DOCTOR_ONLY=1 ./scripts/speedy-ort-cuda.sh" } }}
 
 speedy-dev:
+  just speedy-third-party-ensure
+  {{ if os_family() == "windows" { "./scripts/speedy-prepare-onnx.ps1 -PythonExe \"" + speedy_py + "\"" } else { "PYTHON_EXE=" + speedy_venv_dir + "/bin/python ./scripts/speedy-prepare-onnx.sh" } }}
   {{ if os_family() == "windows" { "./scripts/speedy-ort-cuda.ps1 -PythonExe \"" + speedy_py + "\" -RunScript \"speedy_learning/run_dev.py\"" } else { "PYTHON_EXE=" + speedy_venv_dir + "/bin/python RUN_SCRIPT=speedy_learning/run_dev.py ./scripts/speedy-ort-cuda.sh" } }}
 
 speedy-test:
   {{ if os_family() == "windows" { speedy_py + " speedy_learning/run_test.py" } else { speedy_venv_dir + "/bin/python speedy_learning/run_test.py" } }}
+
+speedy-install:
+  just speedy-venv-create
+  just speedy-venv-install
+  just speedy-third-party-ensure
+  just speedy-onnx-prepare
+  just speedy-ort-fix
+  just speedy-venv-doctor

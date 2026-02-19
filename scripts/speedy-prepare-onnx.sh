@@ -11,38 +11,13 @@ if [[ ! -x "$PYTHON_EXE" ]]; then
   exit 1
 fi
 
-SPEEDY_MODELS_DIR="speedy_learning/models"
-BACKEND_ONNX_DIR="workspace/backend/models/onnx"
-mkdir -p "$SPEEDY_MODELS_DIR"
+echo "[speedy-onnx] Ensuring third_party/mmpose..."
+./scripts/speedy-third-party-ensure.sh
 
-ensure_model() {
-  local name="$1"
-  local target="$SPEEDY_MODELS_DIR/$name"
-  local backend_src="$BACKEND_ONNX_DIR/$name"
-  if [[ -f "$target" ]]; then
-    echo "[speedy-onnx] OK (already): $target"
-    return
-  fi
-  if [[ -f "$backend_src" ]]; then
-    cp -f "$backend_src" "$target"
-    echo "[speedy-onnx] Copied: $backend_src -> $target"
-    return
-  fi
-  echo "[speedy-onnx] Missing $name in backend cache. Trying artifact preparation..."
-  "$PYTHON_EXE" workspace/backend/scripts/prepare_onnx_artifacts.py --out-dir workspace/backend/models/onnx
-  if [[ -f "$backend_src" ]]; then
-    cp -f "$backend_src" "$target"
-    echo "[speedy-onnx] Copied after prepare: $backend_src -> $target"
-    return
-  fi
-  echo "Impossible de trouver/generer $name." >&2
-  exit 1
-}
+echo "[speedy-onnx] Generating required ONNX models..."
+"$PYTHON_EXE" scripts/speedy-generate-required-onnx.py
 
-ensure_model "yolox_s_humanart_fp32.onnx"
-ensure_model "rtmw3d_l_fp32.onnx"
-
-SPEEDY_ONNX_PATHS='["'"$SPEEDY_MODELS_DIR"'/yolox_s_humanart_fp32.onnx","'"$SPEEDY_MODELS_DIR"'/rtmw3d_l_fp32.onnx"]'
+SPEEDY_ONNX_PATHS='["speedy_learning/models/yolox_s_humanart_fp32.onnx","speedy_learning/models/rtmw3d_l_fp32.onnx"]'
 export SPEEDY_ONNX_PATHS
 "$PYTHON_EXE" - <<'PY'
 import json
@@ -59,4 +34,4 @@ for p in paths:
     print("[speedy-onnx] validated {} inputs={} outputs={}".format(pp.name, len(sess.get_inputs()), len(sess.get_outputs())))
 PY
 
-echo "[speedy-onnx] Ready. Required ONNX models are present in $SPEEDY_MODELS_DIR"
+echo "[speedy-onnx] Ready. Required ONNX models are present in speedy_learning/models"
