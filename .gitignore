@@ -40,7 +40,7 @@ yarn-error.log*
 .env*
 
 app
-.agent
+.agent/*
 
 # python
 /workspace/backend/.venv
