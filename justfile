@@ -45,7 +45,17 @@ speedy-venv-create:
   {{ if os_family() == "windows" { speedy_py + " -m pip install --upgrade pip setuptools wheel" } else { speedy_venv_dir + "/bin/python -m pip install --upgrade pip setuptools wheel" } }}
 
 speedy-venv-install:
-  {{ if os_family() == "windows" { speedy_py + " -m pip install -r speedy_learning/backend/requirements.txt" } else { speedy_venv_dir + "/bin/python -m pip install -r speedy_learning/backend/requirements.txt" } }}
+  {{ if os_family() == "windows" {
+    "$attempts = 3; " +
+    "$ok = $false; " +
+    "for ($i = 1; $i -le $attempts; $i++) { " +
+      "Write-Host \"[speedy] pip install attempt $i/$attempts\" -ForegroundColor Cyan; " +
+      "& \"" + speedy_py + "\" -m pip install --extra-index-url https://download.pytorch.org/whl/cu121 -r speedy_learning/backend/requirements.txt; " +
+      "if ($LASTEXITCODE -eq 0) { $ok = $true; break }; " +
+      "if ($i -lt $attempts) { Write-Warning \"[speedy] pip install failed, retry in 5s...\"; Start-Sleep -Seconds 5 } " +
+    "}; " +
+    "if (-not $ok) { throw \"speedy-venv-install failed after $attempts attempts\" }"
+  } else { speedy_venv_dir + "/bin/python -m pip install --extra-index-url https://download.pytorch.org/whl/cu121 -r speedy_learning/backend/requirements.txt" } }}
 
 speedy-onnx-prepare:
   {{ if os_family() == "windows" { "./scripts/speedy-prepare-onnx.ps1 -PythonExe \"" + speedy_py + "\"" } else { "PYTHON_EXE=" + speedy_venv_dir + "/bin/python ./scripts/speedy-prepare-onnx.sh" } }}
