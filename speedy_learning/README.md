@@ -1,4 +1,4 @@
-﻿# Speedy Learning Lab
+# Speedy Learning Lab
 
 Standalone local lab for:
 - 3D viewer and skeleton debug (`speedy_learning/viewer.html`)
@@ -13,8 +13,8 @@ This file documents exactly what to do after a fresh `git clone`.
 - Can run with CUDA or CPU fallback
 
 ## Prerequisites
-- Windows + PowerShell
-- Python 3.10+
+- Windows + PowerShell, or Linux/macOS with bash (the recipes pick the `.ps1` or `.sh` scripts)
+- Python 3.10–3.12 (torch 2.4.1 has no wheels for newer versions; set `PYTHON=/path/to/python3.12` if it is not on PATH)
 - `just` installed and available in PATH
 - Optional NVIDIA GPU with CUDA runtime
 
