@@ -5,9 +5,26 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENV_DIR="$ROOT/workspace/backend/.venv"
 PY="$VENV_DIR/bin/python"
 
+# torch 2.4.1 and the OpenMMLab wheels only exist for Python 3.10-3.12.
+find_python() {
+  local candidate
+  for candidate in "${PYTHON:-}" python3.12 python3.11 python3.10 python3; do
+    [[ -n "$candidate" ]] && command -v "$candidate" >/dev/null 2>&1 || continue
+    if "$candidate" -c 'import sys; sys.exit(0 if (3, 10) <= sys.version_info[:2] <= (3, 12) else 1)'; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
 echo "--- [1/6] Initialisation du venv dans $VENV_DIR ---"
 if [[ ! -d "$VENV_DIR" ]]; then
-  python3 -m venv "$VENV_DIR"
+  if ! BASE_PY="$(find_python)"; then
+    echo "Python 3.10-3.12 introuvable. Installez-en un (ex: pyenv, uv) ou passez PYTHON=/chemin/python3.12." >&2
+    exit 1
+  fi
+  "$BASE_PY" -m venv "$VENV_DIR"
 fi
 
 echo "--- [2/6] Mise a jour des outils de packaging (pin setuptools 69.5.1) ---"

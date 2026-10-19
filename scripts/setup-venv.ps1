@@ -6,7 +6,16 @@ $VenvDir = "$Root/workspace/backend/.venv"
 $Py = "$VenvDir/Scripts/python.exe"
 
 Write-Host "--- [1/6] Initialisation du venv dans $VenvDir ---"
-if (!(Test-Path $VenvDir)) { python -m venv $VenvDir }
+if (!(Test-Path $VenvDir)) {
+  # torch 2.4.1 and the OpenMMLab wheels only exist for Python 3.10-3.12.
+  $BasePy = $null
+  foreach ($v in @("3.12", "3.11", "3.10")) {
+    & py "-$v" -c "exit()" 2>$null
+    if ($LASTEXITCODE -eq 0) { $BasePy = @("py", "-$v"); break }
+  }
+  if (-not $BasePy) { throw "Python 3.10-3.12 introuvable (py launcher). Installez Python 3.12." }
+  & $BasePy[0] $BasePy[1] -m venv $VenvDir
+}
 
 Write-Host "--- [2/6] Mise a jour des outils de packaging (pin setuptools 69.5.1) ---"
 & $Py -m pip install --upgrade pip wheel "setuptools==69.5.1" packaging

@@ -2,11 +2,18 @@
 
 ## Run
 
+Use Python 3.10–3.12: torch 2.4.1 and the OpenMMLab packages have no wheels for newer versions.
+
 ```
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python -m app.main
+just setup-venv     # creates workspace/backend/.venv with the CUDA torch + OpenMMLab stack
+just dev-backend    # python -m app.main on port 8001
+```
+
+## Test
+
+```
+cd workspace/backend
+.venv/bin/python -m pytest tests
 ```
 
 ## Config
@@ -24,6 +31,7 @@ python -m app.main
 - `ZENFIT_ORT_PROVIDERS` = provider priority list (default: CUDAExecutionProvider,CPUExecutionProvider)
 - `ZENFIT_ONNX_ARTIFACTS_DIR` = ONNX artifact directory (default: workspace/backend/models/onnx)
 - `ZENFIT_DETECTOR_MODEL_PATH` = optional explicit ONNX path for detector override
+- `ZENFIT_CORS_ORIGINS` = comma-separated allowed origins for Socket.IO, or `*` (default: http://localhost:3000,http://127.0.0.1:3000)
 
 ## Notes
 - RTMW3D requires MMPose + Torch.
@@ -37,17 +45,6 @@ python -m app.main
   - `python workspace/backend/scripts/prepare_onnx_artifacts.py`
 - Force rebuild detector FP16 artifacts only:
   - `python workspace/backend/scripts/prepare_onnx_artifacts.py --force-rebuild-fp16-detectors`
-- Full ONNX matrix benchmark:
-  - `python benchmark_ultimate.py`
-- Full ONNX matrix benchmark with skip scenarios:
-  - `set ZENFIT_PROVIDER_PROFILES=cuda_cpu,cpu`
-  - `set ZENFIT_SKIP_LIST=0,1,3,5`
-  - `python benchmark_ultimate.py`
-- RTMW3D aligned matrix benchmark (best combos):
-  - `set ZENFIT_PROVIDER_PROFILES=cuda_cpu,cpu`
-  - `set ZENFIT_SKIP_LIST=0,1,3,5`
-  - `set ZENFIT_BENCH_PROFILES=best`
-  - `python benchmark_rtmw3d.py`
 - MMDeploy starter docs:
   - `workspace/backend/docs/mmdeploy_starter.md`
 - Benchmark units:
