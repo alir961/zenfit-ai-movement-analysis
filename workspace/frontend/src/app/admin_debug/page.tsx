@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
 import { usePoseSocket } from "@/hooks/usePoseSocket";
 import { usePoseStream } from "@/hooks/usePoseStream";
 import { usePoseStore } from "@/lib/poseStore";

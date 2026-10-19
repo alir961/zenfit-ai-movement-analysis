@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import { BoxHelper, GridHelper, AxesHelper, Group } from "three";
@@ -34,6 +34,7 @@ import { getNormalizationScale } from "@/lib/math/normalization";
 function ModelInspector({ url }: { url: string }) {
   const { scene } = useGLTF(url);
   const ref = useRef<Group>(null);
+  const boundsHelper = useMemo(() => new BoxHelper(scene, 0x00cc99), [scene]);
 
   useEffect(() => {
     if (ref.current) {
@@ -42,17 +43,14 @@ function ModelInspector({ url }: { url: string }) {
       const scale = getNormalizationScale(scene);
       object.scale.set(scale, scale, scale);
       
-      // Center the model
-      const box = new BoxHelper(object);
-      box.update();
-      // centering logic if needed, but usually scale is enough for inspection
+      boundsHelper.update();
     }
-  }, [scene]);
+  }, [scene, boundsHelper]);
 
   return (
     <group>
       <primitive object={scene} ref={ref} />
-      {ref.current && <primitive object={new BoxHelper(ref.current, 0x00cc99)} />}
+      <primitive object={boundsHelper} />
     </group>
   );
 }

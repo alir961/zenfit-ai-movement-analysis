@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useMemo, useRef } from "react";
+import React, { useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { CameraFeed } from "@/components/camera/CameraFeed";
-import { PandaCoach } from "@/components/coach/PandaCoach";
 import { LiveDetectionPanel } from "@/components/coach/LiveDetectionPanel";
 import { usePoseSocket } from "@/hooks/usePoseSocket";
 import { usePoseStream } from "@/hooks/usePoseStream";
@@ -20,7 +19,6 @@ export default function HomePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const socket = usePoseSocket();
   const sessionState = usePoseStore((state) => state.sessionState);
-  const socketConnected = usePoseStore((state) => state.socketConnected);
   const exercise = usePoseStore((state) => state.exercise);
   const setSessionState = usePoseStore((state) => state.setSessionState);
 
@@ -69,7 +67,7 @@ export default function HomePage() {
                     <div className="flex items-center gap-4">
                       <div className="btn-icon-circle text-mint">👤</div>
                       <p className="text-sm font-medium text-lavender">
-                        Prêt pour l'équilibre ?
+                        Prêt pour l&apos;équilibre ?
                       </p>
                     </div>
 
