@@ -29,7 +29,7 @@ camera ──► person detection ──► 3D pose estimation ──► 17-join
 ## Highlights
 
 - **Real-time inference** with ONNX Runtime (CUDA provider with CPU fallback), fp32 and fp16 RTMW3D models, and benchmark results for model and runtime variants (`workspace/backend/benchmarks`)
-- **Exercise analysis**: squat, push-up and jumping-jack detection from joint angles and relative joint positions
+- **Exercise analysis**: One-Euro smoothed joints feed per-exercise rep counters (squat, push-up, jumping jack) with hysteresis and confidence gating
 - **Learned classifier**: dataset parser (video → pose sequences → train/val `.npz`, labels taken from file names) and GPU training with AMP, label smoothing, warm-up + cosine LR schedule and best-checkpoint saving
 - **3D avatar**: Next.js, React Three Fiber and a rigged GLB model driven by the predicted joints
 
@@ -50,6 +50,13 @@ just dev-frontend        # Next.js client
 ```bash
 just speedy-install      # venv, dependencies, MMPose third-party, ONNX models
 just speedy-dev          # FastAPI server and viewer on http://127.0.0.1:8000
+```
+
+**Tests** (also run by GitHub Actions on every push and pull request):
+
+```bash
+just test                                   # frontend typecheck + tests, backend pytest
+python -m pytest labs/tests                 # filtering / kinematics experiments
 ```
 
 **Train the movement classifier** on your own videos (`*.mp4` in `datasets/`, named after their label, e.g. `squat_01.mp4`):
