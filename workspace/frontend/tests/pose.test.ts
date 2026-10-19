@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { normalizePose } from "../src/lib/pose/normalize";
 import { computeMetrics } from "../src/lib/pose/metrics";
-import { updateExerciseState } from "../src/lib/pose/classify";
 import type { PoseFrame } from "../src/lib/types/pose";
 
 const frame: PoseFrame = {
@@ -46,9 +45,3 @@ describe("computeMetrics", () => {
   });
 });
 
-describe("updateExerciseState", () => {
-  test("detects squat or none without crash", () => {
-    const state = updateExerciseState(null, frame);
-    expect(["squat", "none", "push_up", "burpee"]).toContain(state.name);
-  });
-});

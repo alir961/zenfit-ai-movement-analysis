@@ -39,8 +39,6 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-app
-.agent/*
 
 # python
 /workspace/backend/.venv
@@ -65,8 +63,6 @@ app
 *.tsbuildinfo
 next-env.d.ts
 
-
-.agent
 *.onnx
 *.pth
 

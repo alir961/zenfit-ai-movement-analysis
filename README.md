@@ -70,7 +70,7 @@ workspace/frontend   Next.js + React Three Fiber client
 speedy_learning/     FastAPI lab: detection + pose pipeline, viewer, dataset parser, training
 labs/                Filtering and kinematics experiments with tests
 scripts/             Setup, dev and ONNX preparation scripts (.ps1 and .sh)
-docs/, archive/      Design notes, earlier prototypes and one-off scripts
+docs/                Architecture, socket events and debug metrics notes
 ```
 
 ## Tech stack
