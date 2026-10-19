@@ -1,4 +1,4 @@
-﻿set shell := ["bash", "-cu"]
+set shell := ["bash", "-cu"]
 set windows-shell := ["powershell", "-NoProfile", "-Command"]
 
 venv_dir := "workspace/backend/.venv"
@@ -15,6 +15,9 @@ doctor-venv:
 
 install-mm:
   ./scripts/install-mm.{{script_ext}}
+
+fetch-models:
+  ./scripts/fetch-models.{{script_ext}}
 
 build-frontend:
   ./scripts/build-frontend.{{script_ext}}
@@ -41,21 +44,10 @@ build:
   ./scripts/build.{{script_ext}}
 
 speedy-venv-create:
-  {{ if os_family() == "windows" { "if (!(Test-Path \"" + speedy_venv_dir + "\")) { python -m venv \"" + speedy_venv_dir + "\" }" } else { "if [ ! -d \"" + speedy_venv_dir + "\" ]; then python3 -m venv \"" + speedy_venv_dir + "\"; fi" } }}
-  {{ if os_family() == "windows" { speedy_py + " -m pip install --upgrade pip wheel setuptools==60.2.0" } else { speedy_venv_dir + "/bin/python -m pip install --upgrade pip wheel setuptools==60.2.0" } }}
+  ./scripts/speedy-venv-create.{{script_ext}}
 
 speedy-venv-install:
-  {{ if os_family() == "windows" {
-    "$attempts = 3; " +
-    "$ok = $false; " +
-    "for ($i = 1; $i -le $attempts; $i++) { " +
-      "Write-Host \"[speedy] pip install attempt $i/$attempts\" -ForegroundColor Cyan; " +
-      "& \"" + speedy_py + "\" -m pip install --extra-index-url https://download.pytorch.org/whl/cu121 -r speedy_learning/backend/requirements.txt; " +
-      "if ($LASTEXITCODE -eq 0) { $ok = $true; break }; " +
-      "if ($i -lt $attempts) { Write-Warning \"[speedy] pip install failed, retry in 5s...\"; Start-Sleep -Seconds 5 } " +
-    "}; " +
-    "if (-not $ok) { throw \"speedy-venv-install failed after $attempts attempts\" }"
-  } else { speedy_venv_dir + "/bin/python -m pip install --extra-index-url https://download.pytorch.org/whl/cu121 -r speedy_learning/backend/requirements.txt" } }}
+  ./scripts/speedy-venv-install.{{script_ext}}
 
 speedy-third-party-ensure:
   {{ if os_family() == "windows" { "./scripts/speedy-third-party-ensure.ps1" } else { "./scripts/speedy-third-party-ensure.sh" } }}
