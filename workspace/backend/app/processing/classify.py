@@ -1,14 +1,53 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional
 import math
 
-from ..contracts.events import ExerciseState, PoseFrame
-from .metrics import compute_metrics
+from ..contracts.events import ExerciseName, ExerciseState, PoseFrame
 
+# Joints below this confidence are treated as missing.
+MIN_JOINT_CONFIDENCE = 0.3
+# A new phase must be seen on this many consecutive frames before it is accepted.
+PHASE_CONFIRM_FRAMES = 2
 
-def _get_joint(frame: PoseFrame, name: str):
-    return next((joint for joint in frame["joints"] if joint["name"] == name), None)
+# Squat: average knee angle (degrees).
+SQUAT_DOWN_ANGLE = 120.0
+SQUAT_UP_ANGLE = 155.0
+# Push-up: average elbow angle (degrees), only while the torso is roughly horizontal.
+PUSH_UP_DOWN_ANGLE = 100.0
+PUSH_UP_UP_ANGLE = 150.0
+# Max |shoulder.y - hip.y| in torso lengths (normalized space) to count as a plank (~30 deg).
+PLANK_MAX_TORSO_RISE = 0.5
+# Jumping jack: ankle spread relative to shoulder width.
+JACK_OPEN_FEET_RATIO = 1.6
+JACK_CLOSED_FEET_RATIO = 1.2
+
+SUPPORTED_EXERCISES: tuple[ExerciseName, ...] = ("squat", "push_up", "jumping_jack")
+
+_REQUIRED_JOINTS: Dict[str, tuple[str, ...]] = {
+    "squat": ("left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle"),
+    "push_up": (
+        "left_shoulder",
+        "right_shoulder",
+        "left_elbow",
+        "right_elbow",
+        "left_wrist",
+        "right_wrist",
+        "left_hip",
+        "right_hip",
+    ),
+    "jumping_jack": (
+        "left_shoulder",
+        "right_shoulder",
+        "left_wrist",
+        "right_wrist",
+        "left_ankle",
+        "right_ankle",
+    ),
+}
+
+# Entering this phase from the opposite one completes a repetition.
+_REP_COMPLETING_PHASE = {"squat": "up", "push_up": "up", "jumping_jack": "down"}
 
 
 def _angle_at(a: Dict[str, float], b: Dict[str, float], c: Dict[str, float]) -> float:
@@ -22,93 +61,132 @@ def _angle_at(a: Dict[str, float], b: Dict[str, float], c: Dict[str, float]) -> 
     return float(math.degrees(math.acos(cos)))
 
 
-def _default_state() -> ExerciseState:
+def _mid_y(a: Dict[str, float], b: Dict[str, float]) -> float:
+    return (a["y"] + b["y"]) / 2.0
+
+
+def _default_state(name: ExerciseName = "none") -> ExerciseState:
     return {
-        "name": "none",
+        "name": name,
         "phase": "idle",
         "confidence": 0.0,
         "repCount": 0,
     }
 
 
+def _squat_phase(j: Dict[str, Dict[str, float]]) -> Optional[str]:
+    knee_angle = (
+        _angle_at(j["left_hip"], j["left_knee"], j["left_ankle"])
+        + _angle_at(j["right_hip"], j["right_knee"], j["right_ankle"])
+    ) / 2.0
+    if knee_angle < SQUAT_DOWN_ANGLE:
+        return "down"
+    if knee_angle > SQUAT_UP_ANGLE:
+        return "up"
+    return None
+
+
+def _push_up_phase(j: Dict[str, Dict[str, float]]) -> Optional[str]:
+    shoulder_y = _mid_y(j["left_shoulder"], j["right_shoulder"])
+    hip_y = _mid_y(j["left_hip"], j["right_hip"])
+    if abs(shoulder_y - hip_y) > PLANK_MAX_TORSO_RISE:
+        return None
+    elbow_angle = (
+        _angle_at(j["left_shoulder"], j["left_elbow"], j["left_wrist"])
+        + _angle_at(j["right_shoulder"], j["right_elbow"], j["right_wrist"])
+    ) / 2.0
+    if elbow_angle < PUSH_UP_DOWN_ANGLE:
+        return "down"
+    if elbow_angle > PUSH_UP_UP_ANGLE:
+        return "up"
+    return None
+
+
+def _jumping_jack_phase(j: Dict[str, Dict[str, float]]) -> Optional[str]:
+    shoulder_width = abs(j["left_shoulder"]["x"] - j["right_shoulder"]["x"])
+    if shoulder_width <= 1e-6:
+        return None
+    feet_ratio = abs(j["left_ankle"]["x"] - j["right_ankle"]["x"]) / shoulder_width
+    shoulder_y = _mid_y(j["left_shoulder"], j["right_shoulder"])
+    wrists_above = j["left_wrist"]["y"] > shoulder_y and j["right_wrist"]["y"] > shoulder_y
+    wrists_below = j["left_wrist"]["y"] < shoulder_y and j["right_wrist"]["y"] < shoulder_y
+    if wrists_above and feet_ratio > JACK_OPEN_FEET_RATIO:
+        return "up"
+    if wrists_below and feet_ratio < JACK_CLOSED_FEET_RATIO:
+        return "down"
+    return None
+
+
+_PHASE_DETECTORS = {
+    "squat": _squat_phase,
+    "push_up": _push_up_phase,
+    "jumping_jack": _jumping_jack_phase,
+}
+
+
 class ExerciseClassifier:
-    def __init__(self) -> None:
-        self.state: ExerciseState = _default_state()
+    """Counts repetitions of the selected exercise from normalized pose frames.
+
+    Expects frames in normalized space (hip-centred, y pointing up). Each exercise
+    has separate enter thresholds for its two phases; between them the previous
+    phase is kept, so noise around a single threshold cannot produce extra reps.
+    """
+
+    def __init__(self, exercise: ExerciseName = "squat") -> None:
+        self.state: ExerciseState = _default_state(exercise)
+        self._candidate: Optional[str] = None
+        self._candidate_frames = 0
+
+    def set_exercise(self, exercise: Optional[str]) -> None:
+        if exercise not in SUPPORTED_EXERCISES or exercise == self.state["name"]:
+            return
+        self.state = _default_state(exercise)  # type: ignore[arg-type]
+        self._candidate = None
+        self._candidate_frames = 0
 
     def update(self, frame: Optional[PoseFrame]) -> ExerciseState:
-        if frame is None:
+        name = self.state["name"]
+        if frame is None or frame.get("space") != "normalized" or name not in _PHASE_DETECTORS:
             return self.state
 
-        left_hip = _get_joint(frame, "left_hip")
-        right_hip = _get_joint(frame, "right_hip")
-        left_knee = _get_joint(frame, "left_knee")
-        right_knee = _get_joint(frame, "right_knee")
-        left_ankle = _get_joint(frame, "left_ankle")
-        right_ankle = _get_joint(frame, "right_ankle")
-        left_shoulder = _get_joint(frame, "left_shoulder")
-        right_shoulder = _get_joint(frame, "right_shoulder")
-        left_elbow = _get_joint(frame, "left_elbow")
-        right_elbow = _get_joint(frame, "right_elbow")
-        left_wrist = _get_joint(frame, "left_wrist")
-        right_wrist = _get_joint(frame, "right_wrist")
-
-        if not left_hip or not right_hip or not left_knee or not right_knee or not left_ankle or not right_ankle:
+        joints = _confident_joints(frame["joints"], _REQUIRED_JOINTS[name])
+        if joints is None:
             return self.state
 
-        hip = {
-            "x": (left_hip["x"] + right_hip["x"]) / 2.0,
-            "y": (left_hip["y"] + right_hip["y"]) / 2.0,
-            "z": (left_hip["z"] + right_hip["z"]) / 2.0,
-        }
+        confidence = sum(joint["c"] for joint in joints.values()) / len(joints)
+        next_state: ExerciseState = {**self.state, "confidence": float(max(0.0, min(1.0, confidence)))}
 
-        knee = {
-            "x": (left_knee["x"] + right_knee["x"]) / 2.0,
-            "y": (left_knee["y"] + right_knee["y"]) / 2.0,
-            "z": (left_knee["z"] + right_knee["z"]) / 2.0,
-        }
+        observed = _PHASE_DETECTORS[name](joints)
+        if observed is None or observed == self.state["phase"]:
+            self._candidate = None
+            self._candidate_frames = 0
+            self.state = next_state
+            return next_state
 
-        left_knee_angle = _angle_at(left_hip, left_knee, left_ankle)
-        right_knee_angle = _angle_at(right_hip, right_knee, right_ankle)
-        knee_angle = (left_knee_angle + right_knee_angle) / 2.0
-
-        metrics = compute_metrics(frame)
-        confidence = max(0.0, min(1.0, metrics["confidence"]))
-
-        squat_down = hip["y"] < knee["y"] - 0.08 and knee_angle < 120
-        squat_up = hip["y"] >= knee["y"] - 0.02 and knee_angle > 150
-
-        is_push_up = False
-        if left_shoulder and right_shoulder and left_elbow and right_elbow and left_wrist and right_wrist:
-            shoulder_y = (left_shoulder["y"] + right_shoulder["y"]) / 2.0
-            wrist_y = (left_wrist["y"] + right_wrist["y"]) / 2.0
-            elbow_angle = (
-                _angle_at(left_shoulder, left_elbow, left_wrist)
-                + _angle_at(right_shoulder, right_elbow, right_wrist)
-            ) / 2.0
-            is_push_up = abs(shoulder_y - hip["y"]) < 0.2 and wrist_y < shoulder_y + 0.2 and elbow_angle < 130
-
-        is_burpee = squat_down and is_push_up
-
-        prev = self.state
-        next_state = {**prev, "confidence": confidence}
-
-        if is_burpee:
-            next_state["name"] = "burpee"
-            next_state["phase"] = "down" if squat_down else "up"
-        elif is_push_up:
-            next_state["name"] = "push_up"
-            next_state["phase"] = "down"
-        elif squat_down or squat_up:
-            next_state["name"] = "squat"
-            next_state["phase"] = "down" if squat_down else "up"
+        if observed == self._candidate:
+            self._candidate_frames += 1
         else:
-            next_state["name"] = "none"
-            next_state["phase"] = "idle"
+            self._candidate = observed
+            self._candidate_frames = 1
 
-        if prev["name"] == next_state["name"] and prev["phase"] == "down" and next_state["phase"] == "up":
-            next_state["repCount"] = prev["repCount"] + 1
-        else:
-            next_state["repCount"] = prev["repCount"]
+        if self._candidate_frames >= PHASE_CONFIRM_FRAMES:
+            prev_phase = self.state["phase"]
+            next_state["phase"] = observed  # type: ignore[typeddict-item]
+            if prev_phase not in ("idle", observed) and observed == _REP_COMPLETING_PHASE[name]:
+                next_state["repCount"] = self.state["repCount"] + 1
+            self._candidate = None
+            self._candidate_frames = 0
 
         self.state = next_state
         return next_state
+
+
+def _confident_joints(joints: Iterable[Dict[str, float]], required: tuple[str, ...]) -> Optional[Dict[str, Dict[str, float]]]:
+    by_name = {joint["name"]: joint for joint in joints}  # type: ignore[index]
+    selected = {}
+    for name in required:
+        joint = by_name.get(name)
+        if joint is None or joint.get("c", 0.0) < MIN_JOINT_CONFIDENCE:
+            return None
+        selected[name] = joint
+    return selected

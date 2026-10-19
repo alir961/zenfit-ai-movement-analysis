@@ -56,8 +56,11 @@ class PoseMetrics(TypedDict):
     distances: Dict[str, float]
 
 
+ExerciseName = Literal["squat", "push_up", "jumping_jack", "none"]
+
+
 class ExerciseState(TypedDict):
-    name: Literal["squat", "push_up", "burpee", "none"]
+    name: ExerciseName
     phase: Literal["idle", "down", "up", "hold", "transition"]
     confidence: float
     repCount: int

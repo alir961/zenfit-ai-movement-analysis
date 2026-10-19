@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 from typing import Any, Dict
@@ -17,7 +18,10 @@ from .processing.classify import ExerciseClassifier
 
 logger = logging.getLogger("zenfit.socket")
 
-sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+_cors_raw = os.getenv("ZENFIT_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").strip()
+_cors_origins = "*" if _cors_raw == "*" else [o.strip() for o in _cors_raw.split(",") if o.strip()]
+
+sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins=_cors_origins)
 app = socketio.ASGIApp(sio)
 
 _det_input_size = None
@@ -50,6 +54,8 @@ runner = RTMW3DRunner(
     detector_model_path=os.getenv("ZENFIT_DETECTOR_MODEL_PATH") or None,
 )
 classifiers: Dict[str, ExerciseClassifier] = {}
+# Inference is CPU/GPU bound: run it off the event loop, one frame at a time.
+_infer_lock = asyncio.Lock()
 
 
 def _decode_image(payload: Dict[str, Any]) -> np.ndarray | None:
@@ -100,10 +106,12 @@ async def handle_pose_input(sid: str, data: Dict[str, Any]) -> None:
         else:
             width = data.get("width")
             height = data.get("height")
-            if isinstance(width, (int, float)) and isinstance(height, (int, float)):
-                raw_frame = runner.infer(frame, (int(width), int(height)))
-            else:
-                raw_frame = runner.infer(frame)
+            size = (int(width), int(height)) if isinstance(width, (int, float)) and isinstance(height, (int, float)) else None
+            if _infer_lock.locked():
+                # Drop the frame instead of queueing it: queued frames only add latency.
+                return
+            async with _infer_lock:
+                raw_frame = await asyncio.to_thread(runner.infer, frame, size)
             if raw_frame is None:
                 errors.append("pose_inference_failed")
             else:
@@ -115,8 +123,9 @@ async def handle_pose_input(sid: str, data: Dict[str, Any]) -> None:
 
     classifier = classifiers.get(sid) or ExerciseClassifier()
     classifiers[sid] = classifier
+    classifier.set_exercise(data.get("exercise"))
 
-    exercise_state = classifier.update(normalized_frame or raw_frame)
+    exercise_state = classifier.update(normalized_frame)
 
     if normalized_frame is not None and params is not None:
         await sio.emit(events.POSE_NORMALIZED, {"frame": normalized_frame, "params": params}, to=sid)

@@ -70,6 +70,7 @@ export const usePoseStream = (
                   width,
                   height,
                   image: blob,
+                  exercise: usePoseStore.getState().selectedExercise,
                   clientMeta: {
                     fps: TARGET_FPS,
                     source: "camera",

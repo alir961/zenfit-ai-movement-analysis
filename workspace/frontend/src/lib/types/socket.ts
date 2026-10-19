@@ -1,4 +1,4 @@
-import type { ExerciseState } from "./exercise";
+import type { ExerciseName, ExerciseState } from "./exercise";
 import type { PoseFrame, NormalizationParams } from "./pose";
 import type { PoseMetrics } from "./metrics";
 
@@ -8,6 +8,7 @@ export interface PoseInputPayload {
   width: number;
   height: number;
   image: Blob;
+  exercise: Exclude<ExerciseName, "none">;
   clientMeta?: Record<string, string | number | boolean>;
 }
 
