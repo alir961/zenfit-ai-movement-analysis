@@ -15,6 +15,7 @@ from .processing.rtmw3d_runtime import RTMW3DRunner
 from .processing.normalize import normalize_pose
 from .processing.metrics import compute_metrics
 from .processing.classify import ExerciseClassifier
+from .processing.smoothing import PoseSmoother
 
 logger = logging.getLogger("zenfit.socket")
 
@@ -54,6 +55,7 @@ runner = RTMW3DRunner(
     detector_model_path=os.getenv("ZENFIT_DETECTOR_MODEL_PATH") or None,
 )
 classifiers: Dict[str, ExerciseClassifier] = {}
+smoothers: Dict[str, PoseSmoother] = {}
 # Inference is CPU/GPU bound: run it off the event loop, one frame at a time.
 _infer_lock = asyncio.Lock()
 
@@ -80,12 +82,14 @@ def _decode_image(payload: Dict[str, Any]) -> np.ndarray | None:
 @sio.event
 async def connect(sid: str, environ: Dict[str, Any]) -> None:
     classifiers[sid] = ExerciseClassifier()
+    smoothers[sid] = PoseSmoother()
     logger.info("client connected %s", sid)
 
 
 @sio.event
 async def disconnect(sid: str) -> None:
     classifiers.pop(sid, None)
+    smoothers.pop(sid, None)
     logger.info("client disconnected %s", sid)
 
 
@@ -119,6 +123,8 @@ async def handle_pose_input(sid: str, data: Dict[str, Any]) -> None:
 
     if raw_frame is not None:
         normalized_frame, params = normalize_pose(raw_frame)
+        if normalized_frame.get("space") == "normalized":
+            normalized_frame = smoothers.setdefault(sid, PoseSmoother()).update(normalized_frame)
         metrics = compute_metrics(normalized_frame)
 
     classifier = classifiers.get(sid) or ExerciseClassifier()
