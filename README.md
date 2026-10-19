@@ -1,131 +1,78 @@
-# ZenFit / Speedy Learning
+# ZenFit — Real-Time 3D Pose Estimation for Exercise Analysis
 
-Ce repo contient plusieurs espaces, mais le workflow principal actuel est `speedy_learning`:
-- pipeline detection/pose (YOLOX + RTMW3D)
-- parsing dataset `pose_raw17_transformed`
-- entrainement CUDA + sauvegarde des poids
+ZenFit estimates a person's **3D body pose in real time from a regular camera** and uses it to analyse exercises. A web viewer mirrors the motion on a rigged 3D avatar.
 
-## Prerequis
-- Windows + PowerShell
-- Python 3.10+
-- NVIDIA GPU + drivers CUDA (pour training full GPU)
-- Optionnel: `just` pour automatiser les commandes
-- Git Clone: `third_party` https://github.com/open-mmlab/mmpose
+The repository holds two pipelines built on the same detection + pose models, plus the training code for a learned movement classifier:
 
-## Installation (recommandee via `just`)
-Depuis la racine du repo:
+| Part | What it does |
+|---|---|
+| `workspace/` | Main app. Python Socket.IO backend runs RTMW3D on camera frames and classifies **squats, push-ups and jumping jacks with joint-angle rules** (rep phases, metrics). Next.js + React Three Fiber client drives a rigged GLB avatar and lets the user pick the exercise |
+| `speedy_learning/` | Standalone lab. FastAPI server with a WebSocket camera stream, YOLOX person detection + RTMW3D 3D pose on ONNX Runtime, COCO-17 skeleton mapping and post-processing, and a plain Three.js viewer with live overlays |
+| `speedy_learning/models`, `train_cuda_live.py` | Learned movement classifier, trained offline: a spatio-temporal Transformer whose attention is biased by the skeleton graph. It is **not yet wired into either live pipeline** |
+| `labs/` | Signal-processing experiments for pose stability: One-Euro and Kalman filters, bone-length constraints, scale solving, kinematics, with unit tests |
 
-```powershell
-just speedy-install
+## Pipeline
+
+```
+camera ──► person detection ──► 3D pose estimation ──► 17-joint skeleton
+           (YOLOX, ONNX Runtime)  (RTMW3D, ONNX Runtime,        │
+                                   CUDA or CPU)                 │
+                 ┌──────────────────────────────────────────────┤
+                 ▼                                              ▼
+   workspace: rule-based exercise          speedy_learning: post-processed
+   classifier + metrics ─► Socket.IO ─►    skeleton ─► WebSocket ─► Three.js
+   Next.js / R3F avatar                    viewer with overlays
+
+   offline: videos ─► pose sequences (.npz) ─► graph-biased ST-Transformer
 ```
 
-Ou en detail:
+## Highlights
 
-```powershell
-just speedy-venv-create
-just speedy-venv-install
-just speedy-third-party-ensure
-just speedy-onnx-prepare
-just speedy-ort-fix
+- **Real-time inference** with ONNX Runtime (CUDA provider with CPU fallback), fp32 and fp16 RTMW3D models, and benchmark results for model and runtime variants (`workspace/backend/benchmarks`)
+- **Exercise analysis**: squat, push-up and jumping-jack detection from joint angles and relative joint positions
+- **Learned classifier**: dataset parser (video → pose sequences → train/val `.npz`, labels taken from file names) and GPU training with AMP, label smoothing, warm-up + cosine LR schedule and best-checkpoint saving
+- **3D avatar**: Next.js, React Three Fiber and a rigged GLB model driven by the predicted joints
+
+## Getting started
+
+Requirements: Python 3.10+, [Bun](https://bun.sh) for the Next.js client, optional NVIDIA GPU with CUDA, and [`just`](https://github.com/casey/just). The scripts were written for Windows / PowerShell first; `.sh` equivalents are provided for Linux and macOS.
+
+**Main app** (`workspace/`):
+
+```bash
+just setup-venv          # backend virtual environment
+just dev-backend         # Socket.IO backend on http://localhost:8001
+just dev-frontend        # Next.js client
 ```
 
-Verification rapide:
+**Speedy lab** (`speedy_learning/`):
 
-```powershell
-just speedy-venv-doctor
+```bash
+just speedy-install      # venv, dependencies, MMPose third-party, ONNX models
+just speedy-dev          # FastAPI server and viewer on http://127.0.0.1:8000
 ```
 
-## Lancer le serveur Speedy Learning
+**Train the movement classifier** on your own videos (`*.mp4` in `datasets/`, named after their label, e.g. `squat_01.mp4`):
 
-```powershell
-just speedy-dev
+```bash
+python speedy_learning/parser_dataset_pytorch.py --datasets-dir datasets --output-dir datasets \
+  --stride 1 --sequence-len 120 --sequence-step 30 --val-ratio 0.2
+python speedy_learning/train_cuda_live.py --epochs 10 --batch-size 4
 ```
 
-Le viewer est servi sur `http://127.0.0.1:8000` (ou port libre suivant).
+> Training videos, trained weights and ONNX model files aren't included in this repository because of their size. `just speedy-install` regenerates the required detection and pose ONNX models from MMPose.
 
-## Construire les donnees d'entrainement
-Le parser produit les donnees depuis `datasets/*.mp4` en utilisant `pose_raw17_transformed`.
+## Repository layout
 
-```powershell
-python speedy_learning/parser_dataset_pytorch.py --datasets-dir datasets --output-dir datasets --stride 1 --sequence-len 120 --sequence-step 30 --val-ratio 0.2
+```
+workspace/backend    Socket.IO server, RTMW3D runtime, rule-based classifier, benchmarks
+workspace/frontend   Next.js + React Three Fiber client
+speedy_learning/     FastAPI lab: detection + pose pipeline, viewer, dataset parser, training
+labs/                Filtering and kinematics experiments with tests
+scripts/             Setup, dev and ONNX preparation scripts (.ps1 and .sh)
+docs/, archive/      Design notes, earlier prototypes and one-off scripts
 ```
 
-Sorties generees:
-- `datasets/videos/*.jsonl`
-- `datasets/samples/train.npz`
-- `datasets/samples/val.npz`
-- `datasets/samples/index_train.json`
-- `datasets/samples/index_val.json`
-- `datasets/manifest.json`
-- `datasets/stats.json`
+## Tech stack
 
-## Entrainer le modele (CUDA)
-Script principal:
-
-```powershell
-python speedy_learning/train_cuda_live.py
-```
-
-Fonctionnalites training:
-- Full CUDA + AMP
-- Dropout configurable (`--dropout`)
-- Label smoothing (`--label-smoothing`)
-- Scheduler LR warmup + cosine (`--scheduler cosine`)
-- Eval live par batch + plot
-- Sauvegarde auto du meilleur checkpoint (best val accuracy, tie-break val loss)
-
-Exemple court:
-
-```powershell
-python speedy_learning/train_cuda_live.py --epochs 10 --batch-size 4 --eval-every-batches 2
-```
-
-## Resultats et poids
-Dossier de sortie training:
-- `datasets/training_outputs/`
-
-Fichiers importants:
-- `datasets/training_outputs/best_model.pt`
-- `datasets/training_outputs/last_model.pt`
-- `datasets/training_outputs/checkpoint_epoch_*.pt`
-- `datasets/training_outputs/live_metrics.png`
-- `datasets/training_outputs/live_metrics_history.json`
-
-## Charger les poids
-Exemple minimal:
-
-```python
-from pathlib import Path
-import torch
-from speedy_learning.models.movement_classification import GraphBiasedSTTransformer, ModelCfg
-from speedy_learning.backend.skeleton_map import RAW17_EDGES
-
-ckpt_path = Path("datasets/training_outputs/best_model.pt")
-ckpt = torch.load(ckpt_path, map_location="cuda" if torch.cuda.is_available() else "cpu")
-
-cfg = ModelCfg(**ckpt["cfg"])
-model = GraphBiasedSTTransformer(
-    num_joints=17,
-    edges=[(int(a), int(b)) for a, b in RAW17_EDGES],
-    cfg=cfg,
-)
-model.load_state_dict(ckpt["model_state_dict"])
-model.eval()
-
-print("Best val acc:", ckpt.get("best_val_acc"))
-print("Best val loss:", ckpt.get("best_val_loss"))
-print("Label map:", ckpt.get("label_map"))
-```
-
-## Commandes utiles
-- Test rapide pipeline inference:
-
-```powershell
-just speedy-test
-```
-
-- Regenerer lock requirements speedy:
-
-```powershell
-just speedy-venv-freeze
-```
+Python · PyTorch · ONNX Runtime · MMPose (RTMW3D) · YOLOX · OpenCV · NumPy · FastAPI · Socket.IO · Next.js · React Three Fiber · Three.js
