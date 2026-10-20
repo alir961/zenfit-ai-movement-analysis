@@ -2,9 +2,20 @@
 
 ## Run
 
+Runs with the main app's backend environment (`just setup-venv`, then `just fetch-models`), from the repository root, with a webcam. Windows and Linux.
+
 ```powershell
 .\workspace\backend\.venv\Scripts\python.exe labs.py --preset yolox_s_fp32_fp32_cuda_skip3
 ```
+
+```bash
+# Linux: same commands with the venv's bin/python
+workspace/backend/.venv/bin/python labs.py --preset yolox_s_fp32_fp32_cuda_skip3
+```
+
+The examples below use the Windows path; on Linux replace `.\workspace\backend\.venv\Scripts\python.exe` with `workspace/backend/.venv/bin/python`.
+
+Tests: `workspace/backend/.venv/bin/python -m pytest labs/tests`.
 
 ## Key Flags
 

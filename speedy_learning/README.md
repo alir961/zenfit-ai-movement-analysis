@@ -78,10 +78,10 @@ just speedy-venv-doctor
 ```
 
 Expected:
-- `sys.executable` points to `speedy_learning/.venv/Scripts/python.exe`
+- `sys.executable` points to `speedy_learning/.venv/Scripts/python.exe` (Linux: `speedy_learning/.venv/bin/python`)
 - ONNX providers include at least `CPUExecutionProvider`
 
-2. Verify ONNX paths resolved by Speedy:
+2. Verify ONNX paths resolved by Speedy (on Linux use `speedy_learning/.venv/bin/python`):
 ```powershell
 speedy_learning/.venv/Scripts/python.exe -c "from speedy_learning.backend.inference_yolox import YOLOXDetector; from speedy_learning.backend.inference_rtmw3d import RTMW3DEstimator; d=YOLOXDetector(); p=RTMW3DEstimator(); print(d.model_path); print(p.model_path)"
 ```
