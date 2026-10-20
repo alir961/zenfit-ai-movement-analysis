@@ -43,7 +43,7 @@ for root in roots:
     r=pathlib.Path(root)
     nvidia=r/"nvidia"
     if nvidia.exists():
-        for d in nvidia.glob("*/bin"):
+        for d in nvidia.glob("*/lib"):
             if d.is_dir() and str(d) not in seen:
                 seen.add(str(d)); out.append(str(d))
     for d in (r/"torch"/"lib", r/"onnxruntime"/"capi"):
@@ -54,11 +54,12 @@ PY
 )
 
 if [[ "${#_dll_dirs[@]}" -gt 0 ]]; then
-  echo "[speedy] PATH DLL ajoute:"
+  echo "[speedy] LD_LIBRARY_PATH ajoute:"
   for d in "${_dll_dirs[@]}"; do
     echo "  - $d"
   done
-  export PATH="$(IFS=:; echo "${_dll_dirs[*]}"):$PATH"
+  _lib_path="$(IFS=:; echo "${_dll_dirs[*]}")"
+  export LD_LIBRARY_PATH="$_lib_path${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi
 
 echo "[speedy] Diagnostic ONNXRuntime/CUDA..."
@@ -66,7 +67,7 @@ diag="$("$PYTHON_EXE" - <<'PY'
 import ctypes, json
 res={"providers": [], "dll_ok": False, "dll_error": None}
 try:
-    ctypes.CDLL("cudnn64_9.dll")
+    ctypes.CDLL("libcudnn.so.9")
     res["dll_ok"] = True
 except Exception as e:
     res["dll_error"] = str(e)
@@ -82,7 +83,7 @@ echo "$diag"
 
 if echo "$diag" | grep -q '"dll_ok": false'; then
   export ZENFIT_ORT_CPU_ONLY=1
-  echo "[speedy] WARNING: cudnn64_9.dll non chargeable. CPU fallback actif (ZENFIT_ORT_CPU_ONLY=1)."
+  echo "[speedy] WARNING: libcudnn.so.9 non chargeable. CPU fallback actif (ZENFIT_ORT_CPU_ONLY=1)."
 else
   export ZENFIT_ORT_CPU_ONLY=0
 fi
