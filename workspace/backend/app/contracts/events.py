@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List, TypedDict, Literal, Dict
 
 POSE_INPUT = "pose/input"
+SESSION_START = "session/start"
 POSE_NORMALIZED = "pose/normalized"
 POSE_METRICS = "pose/metrics"
 EXERCISE_STATE = "exercise/state"

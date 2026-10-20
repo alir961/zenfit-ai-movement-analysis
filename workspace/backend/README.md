@@ -31,7 +31,7 @@ cd workspace/backend
 - `ZENFIT_ORT_PROVIDERS` = provider priority list (default: CUDAExecutionProvider,CPUExecutionProvider)
 - `ZENFIT_ONNX_ARTIFACTS_DIR` = ONNX artifact directory (default: workspace/backend/models/onnx)
 - `ZENFIT_DETECTOR_MODEL_PATH` = optional explicit ONNX path for detector override
-- The frontend connects to `NEXT_PUBLIC_POSE_SERVER_URL` (default `http://localhost:8001`); serve it from another origin? add that origin to `ZENFIT_CORS_ORIGINS`.
+- The frontend connects to `NEXT_PUBLIC_POSE_SERVER_URL` (default `http://localhost:8001`). If the frontend is served from another origin, add that origin to `ZENFIT_CORS_ORIGINS`.
 - `ZENFIT_CORS_ORIGINS` = comma-separated allowed origins for Socket.IO, or `*` (default: http://localhost:3000,http://127.0.0.1:3000)
 
 ## Notes

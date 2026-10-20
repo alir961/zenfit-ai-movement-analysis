@@ -3,7 +3,7 @@ import type { ExerciseState, ExerciseName } from "./types/exercise";
 import type { PoseFrame, NormalizationParams } from "./types/pose";
 import type { PoseMetrics } from "./types/metrics";
 
-export type SessionState = "running" | "paused" | "no_input";
+export type SessionState = "running" | "paused";
 
 interface PoseState {
   socketConnected: boolean;
@@ -43,7 +43,7 @@ const defaultExercise: ExerciseState = {
 
 export const usePoseStore = create<PoseState>((set) => ({
   socketConnected: false,
-  sessionState: "no_input",
+  sessionState: "paused",
   selectedExercise: "squat",
   rawPose: null,
   normalizedPose: null,
@@ -73,7 +73,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     }),
   reset: () =>
     set({
-      sessionState: "no_input",
+      sessionState: "paused",
       selectedExercise: "squat",
       rawPose: null,
       normalizedPose: null,

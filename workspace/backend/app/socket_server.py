@@ -93,6 +93,13 @@ async def disconnect(sid: str) -> None:
     logger.info("client disconnected %s", sid)
 
 
+@sio.on(events.SESSION_START)
+async def handle_session_start(sid: str, data: Any = None) -> None:
+    # A new session counts reps from zero and does not smooth from the last pose.
+    classifiers[sid] = ExerciseClassifier()
+    smoothers[sid] = PoseSmoother()
+
+
 @sio.on(events.POSE_INPUT)
 async def handle_pose_input(sid: str, data: Dict[str, Any]) -> None:
     errors: list[str] = []

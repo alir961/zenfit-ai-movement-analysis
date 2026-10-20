@@ -23,12 +23,9 @@ flowchart LR
 
 ```mermaid
 stateDiagram-v2
-  [*] --> NoInput
-  NoInput --> Paused: socket connected
-  Paused --> Running: start session
-  Running --> Paused: user pause
-  Running --> NoInput: socket disconnect
-  Paused --> NoInput: socket disconnect
+  [*] --> Paused
+  Paused --> Running: Start session (backend connected; emits session/start)
+  Running --> Paused: Stop session
 ```
 
 ## Key Modules
@@ -44,3 +41,4 @@ stateDiagram-v2
 ## Notes
 - Only RTMW3D-L is the default model size.
 - GPU is preferred, CPU fallback is allowed.
+- The client retries the backend connection without limit. If the backend drops during a session, the session stays running and frames resume once the socket reconnects.

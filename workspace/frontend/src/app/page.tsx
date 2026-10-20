@@ -11,6 +11,7 @@ import { usePoseSocket } from "@/hooks/usePoseSocket";
 import { usePoseStream } from "@/hooks/usePoseStream";
 import { usePoseStore } from "@/lib/poseStore";
 import { getExercise } from "@/lib/exercises";
+import { SESSION_START } from "@/lib/socket/events";
 
 const AvatarCanvas = dynamic(() => import("@/components/avatar/AvatarCanvas").then((mod) => mod.AvatarCanvas), {
   ssr: false,
@@ -24,11 +25,19 @@ export default function HomePage() {
   const selectedExercise = usePoseStore((state) => state.selectedExercise);
   const phase = usePoseStore((state) => state.exercise.phase);
   const setSessionState = usePoseStore((state) => state.setSessionState);
+  const setExerciseState = usePoseStore((state) => state.setExerciseState);
 
   const running = sessionState === "running";
   const exerciseInfo = getExercise(selectedExercise);
 
   usePoseStream(socket, videoRef, running);
+
+  const startSession = () => {
+    // Each session counts reps from zero: reset the backend counter and the shown state.
+    socket.emit(SESSION_START);
+    setExerciseState({ name: selectedExercise, phase: "idle", confidence: 0, repCount: 0 });
+    setSessionState("running");
+  };
 
   return (
     <div className="coach">
@@ -71,7 +80,7 @@ export default function HomePage() {
               <button
                 type="button"
                 className="btn btn--primary"
-                onClick={() => setSessionState("running")}
+                onClick={startSession}
                 disabled={!socketConnected}
               >
                 Start session

@@ -82,7 +82,7 @@ export default function AdminDebugPage() {
 
         {/* Middle Column (Visualizations) - Span 4 */}
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
-          <DiagnosticCard title="Raw Skeleton Flux" headerAction={<span className="text-[9px] text-mint">60Hz</span>}>
+          <DiagnosticCard title="Raw Skeleton Flux" headerAction={<span className="text-[9px] text-mint">10 FPS</span>}>
             <div className="aspect-square bg-black/20 rounded-lg relative overflow-hidden">
                <SkeletonRawView showBones={showBones} showJoints={showJoints} showLabels={showLabels} />
             </div>

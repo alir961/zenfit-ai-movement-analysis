@@ -2,6 +2,7 @@
 
 ## Event Names
 - pose/input
+- session/start
 - pose/normalized
 - pose/metrics
 - exercise/state
@@ -21,6 +22,10 @@
   clientMeta?: Record<string, string | number | boolean>
 }
 ```
+
+### session/start (client -> server)
+No payload. Sent when the user presses Start session: the server resets that
+client's rep counter and pose smoothing, so each session counts from zero.
 
 ### pose/normalized (server -> client)
 ```
