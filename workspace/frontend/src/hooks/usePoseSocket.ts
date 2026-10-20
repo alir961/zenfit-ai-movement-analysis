@@ -40,9 +40,16 @@ export const usePoseSocket = (): Socket => {
       setDebugState(payload);
     });
 
+    // The effect can run again on the same socket (React Strict Mode remounts it):
+    // reconnect after the previous cleanup and sync the state, since "connect"
+    // may have fired before these listeners were attached.
+    if (!socket.connected) socket.connect();
+    setSocketConnected(socket.connected);
+
     return () => {
       socket.removeAllListeners();
       socket.disconnect();
+      setSocketConnected(false);
     };
   }, [setDebugState, setExerciseState, setMetrics, setNormalizedPose, setSocketConnected, socket]);
 
