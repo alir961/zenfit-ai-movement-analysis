@@ -35,13 +35,13 @@ camera ──► person detection ──► 3D pose estimation ──► 17-join
 
 ## Getting started
 
-Requirements: Python 3.10–3.12 (torch 2.4.1 and OpenMMLab have no wheels for newer versions), [Bun](https://bun.sh) for the Next.js client, optional NVIDIA GPU with CUDA, and [`just`](https://github.com/casey/just). The scripts were written for Windows / PowerShell first; `.sh` equivalents are provided for Linux and macOS.
+Requirements: Python 3.10–3.12 (torch 2.4.1 and OpenMMLab have no wheels for newer versions), [Bun](https://bun.sh) for the Next.js client, optional NVIDIA GPU with CUDA, and [`just`](https://github.com/casey/just). The scripts were written for Windows / PowerShell first; `.sh` equivalents are provided for Linux (macOS is not supported: the CUDA builds of torch and ONNX Runtime have no macOS wheels).
 
 **Main app** (`workspace/`):
 
 ```bash
 just setup-venv          # backend virtual environment (torch, OpenMMLab, ONNX Runtime)
-just fetch-models        # MMPose sources in third_party/ and the RTMW3D-L checkpoint (~400 MB)
+just fetch-models        # MMPose sources in third_party/ and the RTMW3D-L checkpoint (~220 MB)
 just dev-backend         # Socket.IO backend on http://localhost:8001
 just dev-frontend        # Next.js client
 ```
