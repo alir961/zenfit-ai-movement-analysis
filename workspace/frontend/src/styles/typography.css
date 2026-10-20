@@ -1,25 +1,4 @@
-/* Typography system for Harmonie & Mouvement */
-
-.harmonie-title {
-  font-family: var(--font-zen);
-  font-size: 56px;
-  font-weight: 300;
-  text-align: center;
-  margin: 0;
-  color: #ffffff;
-  letter-spacing: 0.1em;
-}
-
-.harmonie-subtitle {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.4em;
-  text-align: center;
-  color: var(--text-secondary);
-  margin-top: 12px;
-}
+/* Shared typography helpers */
 
 .text-mint {
   color: var(--mint-leaf);

@@ -10,21 +10,6 @@
   color: var(--text-primary);
 }
 
-/* Home / Live Focus Layer
-   - Centered mobile-first focus
-*/
-.zen-live-container {
-  width: 100%;
-  max-width: 520px;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  background: var(--bg-primary);
-  border-left: 1px solid rgba(255, 255, 255, 0.04);
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
-}
-
 /* Admin Debug Layer
    - Wide layout for high information density
 */
@@ -65,14 +50,6 @@
 }
 
 /* Common UI Atoms */
-header.minimal-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px;
-  width: 100%;
-}
-
 .nav-item-pill {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);

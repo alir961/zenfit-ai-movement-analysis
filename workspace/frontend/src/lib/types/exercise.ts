@@ -1,4 +1,4 @@
-export type ExerciseName = "squat" | "push_up" | "jumping_jack" | "none";
+export type ExerciseName = "squat" | "push_up" | "jumping_jack" | "bicep_curl" | "lateral_raise" | "none";
 
 export type ExercisePhase = "idle" | "down" | "up" | "hold" | "transition";
 

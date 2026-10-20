@@ -12,6 +12,12 @@
   --accent-secondary: var(--majorelle-blue);
   --text-primary: #ffffff;
   --text-secondary: var(--lavender);
+  --text-muted: #9aa3a0;
+  --surface: #0d0f0e;
+  --surface-raised: #1a1d1c;
+  --border: rgba(255, 255, 255, 0.08);
+  --danger: #ef4444;
+  --warning: #f5b84b;
   
   /* Glass Effects */
   --glass-bg: rgba(2, 1, 0, 0.72);
@@ -30,5 +36,4 @@
   /* Typography */
   --font-body: "Inter", "Plus Jakarta Sans", sans-serif;
   --font-display: "Space Grotesk", sans-serif;
-  --font-zen: "Noto Sans JP", sans-serif;
 }

@@ -5,11 +5,13 @@ import React, { useEffect, useState, forwardRef } from "react";
 interface CameraFeedProps {
   className?: string;
   mirrored?: boolean;
+  /** "contain" shows the whole camera frame, "cover" fills the box and crops. */
+  fit?: "cover" | "contain";
   onReady?: () => void;
 }
 
 export const CameraFeed = forwardRef<HTMLVideoElement, CameraFeedProps>(
-  ({ className, mirrored = true, onReady }, ref) => {
+  ({ className, mirrored = true, fit = "cover", onReady }, ref) => {
     const internalRef = React.useRef<HTMLVideoElement>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +70,7 @@ export const CameraFeed = forwardRef<HTMLVideoElement, CameraFeedProps>(
     return (
       <video
         ref={internalRef}
-        className={`w-full h-full object-cover ${mirrored ? "scale-x-[-1]" : ""} ${className ?? ""}`}
+        className={`w-full h-full ${fit === "contain" ? "object-contain" : "object-cover"} ${mirrored ? "scale-x-[-1]" : ""} ${className ?? ""}`}
         muted
         playsInline
       />

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Space_Grotesk, Noto_Sans_JP } from "next/font/google";
+import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import "../styles/globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -12,14 +12,9 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
 });
 
-const notoJP = Noto_Sans_JP({
-  variable: "--font-zen",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "ZenFit - Harmonie & Mouvement",
-  description: "Live coaching with RTMW3D pose, avatar, and debug tools.",
+  title: "ZenFit",
+  description: "Real-time rep counting from your camera with RTMW3D pose estimation.",
 };
 
 export default function RootLayout({
@@ -29,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${jakarta.variable} ${spaceGrotesk.variable} ${notoJP.variable} antialiased`}>
+      <body className={`${jakarta.variable} ${spaceGrotesk.variable} antialiased`}>
         <div className="app-shell">
           {children}
         </div>

@@ -25,15 +25,4 @@ html, body {
 @import "./glass.css";
 
 /* 3. Component Layers */
-@import "./components/button.css";
-
-/* 4. Global Animations */
-@keyframes pulse-neon {
-  0% { box-shadow: 0 0 5px rgba(0, 204, 153, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(0, 204, 153, 0.5); }
-  100% { box-shadow: 0 0 5px rgba(0, 204, 153, 0.2); }
-}
-
-.animate-neon {
-  animation: pulse-neon 2s infinite;
-}
+@import "./components/coach.css";

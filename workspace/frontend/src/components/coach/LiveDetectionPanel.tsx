@@ -1,39 +1,56 @@
 "use client";
 
 import React from "react";
+import { motion } from "framer-motion";
 import { usePoseStore } from "@/lib/poseStore";
+import { getExercise } from "@/lib/exercises";
 
 export const LiveDetectionPanel = () => {
   const exercise = usePoseStore((state) => state.exercise);
-  
-  if (exercise.name === "none" && exercise.repCount === 0) return null;
+  const selectedExercise = usePoseStore((state) => state.selectedExercise);
+
+  // The backend switches exercise on the next frame it receives; until then its state
+  // still describes the previous exercise.
+  const synced = exercise.name === selectedExercise;
+  const repCount = synced ? exercise.repCount : 0;
+  const confidence = synced ? Math.round(exercise.confidence * 100) : 0;
+  const label = getExercise(selectedExercise)?.label ?? selectedExercise;
 
   return (
-    <div className="glass-card neon-border flex flex-col gap-4">
-      <div className="flex justify-between items-center">
-        <h2 className="display-large text-mint uppercase text-xs tracking-[0.3em]">Live Analysis</h2>
-        <div className="nav-item-pill text-[9px] animate-pulse">REC</div>
+    <section className="panel stats" aria-live="polite">
+      <div className="stats__reps">
+        <span className="eyebrow">Reps</span>
+        <motion.span
+          key={`${selectedExercise}-${repCount}`}
+          className="stats__count"
+          initial={{ scale: 1.2, opacity: 0.5 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 22 }}
+        >
+          {repCount}
+        </motion.span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-widest text-lavender/50">Mouvement</span>
-          <span className="text-lg font-bold uppercase">{exercise.name.replace("_", " ")}</span>
+      <dl className="stats__grid">
+        <div>
+          <dt className="eyebrow">Exercise</dt>
+          <dd>{label}</dd>
         </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-widest text-lavender/50">Répétitions</span>
-          <span className="text-lg font-bold text-mint">{exercise.repCount}</span>
+        <div>
+          <dt className="eyebrow">Phase</dt>
+          <dd className="stats__phase">{synced ? exercise.phase : "waiting"}</dd>
         </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-widest text-lavender/50">Phase</span>
-          <span className="text-sm font-medium">{exercise.phase}</span>
+      </dl>
+
+      <div className="stats__confidence">
+        <div className="stats__confidence-row">
+          <span className="eyebrow">Tracking confidence</span>
+          <span>{confidence}%</span>
         </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-widest text-lavender/50">Confiance</span>
-          <span className="text-sm font-medium">{Math.round(exercise.confidence * 100)}%</span>
+        <div className="meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={confidence}>
+          <div className="meter__fill" style={{ width: `${confidence}%` }} />
         </div>
       </div>
-    </div>
+    </section>
   );
 };
-
