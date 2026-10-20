@@ -19,7 +19,6 @@ export const usePoseStream = (
   const frameRef = useRef<number | null>(null);
   const lastSentRef = useRef<number>(0);
   const isSendingRef = useRef(false);
-  const setSessionState = usePoseStore((state) => state.setSessionState);
 
   useEffect(() => {
     if (!enabled) {
@@ -30,12 +29,9 @@ export const usePoseStream = (
       return;
     }
 
-    if (!socket || !socket.connected) {
-      setSessionState("no_input");
-      return;
-    }
-
-    setSessionState("running");
+    // Session state belongs to the page: the debug page streams without a
+    // session, and setting it here would start one on the coach page.
+    if (!socket) return;
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d", { alpha: false });
@@ -98,5 +94,5 @@ export const usePoseStream = (
         frameRef.current = null;
       }
     };
-  }, [enabled, setSessionState, socket, videoRef]);
+  }, [enabled, socket, videoRef]);
 };
