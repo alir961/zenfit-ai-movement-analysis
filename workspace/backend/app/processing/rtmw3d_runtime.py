@@ -173,6 +173,7 @@ class RTMW3DRunner:
         
         # Tracking state
         self._last_bbox = None
+        self._last_frame_shape: Optional[tuple[int, ...]] = None
         self._track_count = 0
         self._track_interval = max(0, int(track_interval)) # Run heavy detector every N frames
 
@@ -628,6 +629,12 @@ class RTMW3DRunner:
         try:
             h_img, w_img = frame_bgr.shape[:2]
             t0 = time.perf_counter()
+            # The cached bbox is in pixels of the frame it was detected on: drop it
+            # when the frame size changes (another client or camera resolution).
+            if frame_bgr.shape != self._last_frame_shape:
+                self._last_bbox = None
+                self._track_count = 0
+                self._last_frame_shape = frame_bgr.shape
             
             # --- Detection Logic with Tracking ---
             det_ms = 0.0
