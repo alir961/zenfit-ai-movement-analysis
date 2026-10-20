@@ -1,4 +1,4 @@
-﻿export class CameraStreamClient {
+export class CameraStreamClient {
   constructor({ processedImgEl, endpointWs, fpsTarget = 15, onStatus = null } = {}) {
     this.processedImgEl = processedImgEl;
     this.endpointWs = endpointWs;

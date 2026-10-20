@@ -1,4 +1,4 @@
-﻿from labs.estimation.kalman_bank import KalmanBank3D
+from labs.estimation.kalman_bank import KalmanBank3D
 
 
 def test_kalman_predict_update_cycle():

@@ -1,4 +1,4 @@
-﻿# Speedy Learning Labs Protocol
+# Speedy Learning Labs Protocol
 
 ## Dev Run
 1. `cd speedy_learning`

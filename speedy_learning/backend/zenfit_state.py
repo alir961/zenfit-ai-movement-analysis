@@ -305,7 +305,7 @@ class Zenfit:
         raw17_normalized_full = GenericSkeleton.normalize_skeleton(raw17_skeleton)
         raw17_normalized_full_payload = raw17_normalized_full.to_payload()
         
-        # TODO done: Apply translate and rotation that must create new skeleton
+        # Translate and rotate into a new skeleton (the source is left unchanged):
         # 1) recenter to back_center, 2) rotate around X by 180deg, immutable path.
         raw17_transformed = GenericSkeleton.with_axis_rotation(
             raw17_normalized_full.recenter_to_back_center(),

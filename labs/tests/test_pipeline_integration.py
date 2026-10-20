@@ -1,4 +1,4 @@
-﻿from labs.estimation.fusion import PoseFusionEngine
+from labs.estimation.fusion import PoseFusionEngine
 from labs.types import PoseJointState, PoseMeasurement
 
 

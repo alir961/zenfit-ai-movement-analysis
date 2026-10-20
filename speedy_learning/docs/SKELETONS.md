@@ -1,4 +1,4 @@
-﻿# Skeleton Layers
+# Skeleton Layers
 
 ## Overlay A: Model Skeleton
 - Driven by the loaded GLB/GLTF rig in `frontend/renderer.js`.

@@ -1,4 +1,4 @@
-﻿export class CameraCapture {
+export class CameraCapture {
   constructor(videoEl, { width = 640, height = 360 } = {}) {
     this.videoEl = videoEl;
     this.width = width;

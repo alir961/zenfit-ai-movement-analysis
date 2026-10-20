@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 # Placeholder sandbox for future FK/IK experiments.
 # Intentionally not imported by runtime server routes.

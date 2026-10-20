@@ -1,4 +1,4 @@
-﻿from labs.estimation.quality import compute_quality
+from labs.estimation.quality import compute_quality
 from labs.estimation.scale_solver import ScaleSolver
 from labs.types import PoseJointState
 

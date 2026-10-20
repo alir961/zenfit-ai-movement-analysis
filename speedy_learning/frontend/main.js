@@ -1,4 +1,4 @@
-﻿import { CameraCapture } from "./camera.js";
+import { CameraCapture } from "./camera.js";
 import { CameraStreamClient } from "./camera_stream_client.js";
 import { processSnapshot, fetchHealth } from "./protocol.js";
 import {

@@ -1,4 +1,4 @@
-﻿import numpy as np
+import numpy as np
 
 from labs.estimation.kinematics import quat_from_two_vectors, slerp
 

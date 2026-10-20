@@ -1,4 +1,4 @@
-﻿from labs.runtime.scheduler import AdaptiveState, FrameScheduler
+from labs.runtime.scheduler import AdaptiveState, FrameScheduler
 
 
 def test_fixed_scheduler_skip3():
