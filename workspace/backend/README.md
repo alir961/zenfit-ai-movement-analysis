@@ -6,7 +6,7 @@ Use Python 3.10–3.12: torch 2.4.1 and the OpenMMLab packages have no wheels fo
 
 ```
 just setup-venv     # creates workspace/backend/.venv with the CUDA torch + OpenMMLab stack
-just dev-backend    # python -m app.main on port 8001
+just dev-backend    # python -m app.main on port 8001, restarts on app/ changes (ZENFIT_RELOAD=0 to disable)
 ```
 
 ## Test

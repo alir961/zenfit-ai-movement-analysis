@@ -14,5 +14,5 @@ if [[ ! -x "$PY" ]]; then
   cd "$ROOT/workspace/backend"
 fi
 
-echo "Starting Backend (RTMW3D) at http://localhost:8001 ..."
-"$PY" -m app.main
+echo "Starting Backend (RTMW3D) at http://localhost:8001 (auto-reload on app/ changes) ..."
+ZENFIT_RELOAD="${ZENFIT_RELOAD:-1}" "$PY" -m app.main
