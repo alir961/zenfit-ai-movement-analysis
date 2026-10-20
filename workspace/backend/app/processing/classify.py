@@ -21,8 +21,17 @@ PLANK_MAX_TORSO_RISE = 0.5
 # Jumping jack: ankle spread relative to shoulder width.
 JACK_OPEN_FEET_RATIO = 1.6
 JACK_CLOSED_FEET_RATIO = 1.2
+# Bicep curl: elbow angle (degrees) of the most bent arm.
+CURL_UP_ANGLE = 60.0
+CURL_DOWN_ANGLE = 140.0
+# Lateral raise: arm elevation from hanging straight down (degrees) of the highest arm.
+RAISE_UP_ANGLE = 70.0
+RAISE_DOWN_ANGLE = 30.0
 
-SUPPORTED_EXERCISES: tuple[ExerciseName, ...] = ("squat", "push_up", "jumping_jack")
+SUPPORTED_EXERCISES: tuple[ExerciseName, ...] = ("squat", "push_up", "jumping_jack", "bicep_curl", "lateral_raise")
+# Upper-body exercises only need one visible arm, so they work close to the camera.
+_ARM_EXERCISES = ("bicep_curl", "lateral_raise")
+_ARM_SIDES = ("left", "right")
 
 _REQUIRED_JOINTS: Dict[str, tuple[str, ...]] = {
     "squat": ("left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle"),
@@ -47,7 +56,13 @@ _REQUIRED_JOINTS: Dict[str, tuple[str, ...]] = {
 }
 
 # Entering this phase from the opposite one completes a repetition.
-_REP_COMPLETING_PHASE = {"squat": "up", "push_up": "up", "jumping_jack": "down"}
+_REP_COMPLETING_PHASE = {
+    "squat": "up",
+    "push_up": "up",
+    "jumping_jack": "down",
+    "bicep_curl": "down",
+    "lateral_raise": "down",
+}
 
 
 def _angle_at(a: Dict[str, float], b: Dict[str, float], c: Dict[str, float]) -> float:
@@ -117,10 +132,42 @@ def _jumping_jack_phase(j: Dict[str, Dict[str, float]]) -> Optional[str]:
     return None
 
 
+def _visible_arms(j: Dict[str, Dict[str, float]]) -> list[str]:
+    return [side for side in _ARM_SIDES if f"{side}_wrist" in j]
+
+
+def _bicep_curl_phase(j: Dict[str, Dict[str, float]]) -> Optional[str]:
+    # The most bent arm decides, so single-arm and alternating curls count too.
+    elbow_angle = min(
+        _angle_at(j[f"{side}_shoulder"], j[f"{side}_elbow"], j[f"{side}_wrist"]) for side in _visible_arms(j)
+    )
+    if elbow_angle < CURL_UP_ANGLE:
+        return "up"
+    if elbow_angle > CURL_DOWN_ANGLE:
+        return "down"
+    return None
+
+
+def _arm_elevation(shoulder: Dict[str, float], wrist: Dict[str, float]) -> float:
+    below = {**shoulder, "y": shoulder["y"] - 1.0}  # y points up in normalized space
+    return _angle_at(below, shoulder, wrist)
+
+
+def _lateral_raise_phase(j: Dict[str, Dict[str, float]]) -> Optional[str]:
+    elevation = max(_arm_elevation(j[f"{side}_shoulder"], j[f"{side}_wrist"]) for side in _visible_arms(j))
+    if elevation > RAISE_UP_ANGLE:
+        return "up"
+    if elevation < RAISE_DOWN_ANGLE:
+        return "down"
+    return None
+
+
 _PHASE_DETECTORS = {
     "squat": _squat_phase,
     "push_up": _push_up_phase,
     "jumping_jack": _jumping_jack_phase,
+    "bicep_curl": _bicep_curl_phase,
+    "lateral_raise": _lateral_raise_phase,
 }
 
 
@@ -149,7 +196,10 @@ class ExerciseClassifier:
         if frame is None or frame.get("space") != "normalized" or name not in _PHASE_DETECTORS:
             return self.state
 
-        joints = _confident_joints(frame["joints"], _REQUIRED_JOINTS[name])
+        if name in _ARM_EXERCISES:
+            joints = _confident_arms(frame["joints"])
+        else:
+            joints = _confident_joints(frame["joints"], _REQUIRED_JOINTS[name])
         if joints is None:
             return self.state
 
@@ -190,3 +240,13 @@ def _confident_joints(joints: Iterable[Dict[str, float]], required: tuple[str, .
             return None
         selected[name] = joint
     return selected
+
+
+def _confident_arms(joints: Iterable[Dict[str, float]]) -> Optional[Dict[str, Dict[str, float]]]:
+    """Shoulder, elbow and wrist of every arm seen with confidence; None when no arm is."""
+    selected: Dict[str, Dict[str, float]] = {}
+    for side in _ARM_SIDES:
+        arm = _confident_joints(joints, (f"{side}_shoulder", f"{side}_elbow", f"{side}_wrist"))
+        if arm is not None:
+            selected.update(arm)
+    return selected or None

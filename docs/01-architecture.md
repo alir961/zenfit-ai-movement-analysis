@@ -2,7 +2,7 @@
 
 ## Scope
 - Two pages only: / (Live Coach) and /admin_debug (Debug)
-- Three exercises only: squat, push_up, jumping_jack (picked in the UI, sent with each frame)
+- Five exercises: squat, push_up, jumping_jack (full body in frame) and bicep_curl, lateral_raise (one arm in frame is enough), picked in the UI and sent with each frame
 - Backend required: Python + Socket.IO with RTMW3D-L inference
 
 ## Runtime Flow

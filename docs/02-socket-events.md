@@ -17,7 +17,7 @@
   width: number,
   height: number,
   image: Blob,
-  exercise: "squat" | "push_up" | "jumping_jack",
+  exercise: "squat" | "push_up" | "jumping_jack" | "bicep_curl" | "lateral_raise",
   clientMeta?: Record<string, string | number | boolean>
 }
 ```
@@ -101,7 +101,7 @@
 ### ExerciseState
 ```
 {
-  name: "squat" | "push_up" | "jumping_jack" | "none",
+  name: "squat" | "push_up" | "jumping_jack" | "bicep_curl" | "lateral_raise" | "none",
   phase: "idle" | "down" | "up" | "hold" | "transition",
   confidence: number,
   repCount: number

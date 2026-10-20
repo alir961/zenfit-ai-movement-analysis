@@ -120,3 +120,62 @@ def test_camera_space_frames_are_ignored():
     for _ in range(3):
         clf.update(frame)
     assert clf.state["phase"] == "idle"
+
+
+def _arms(elbow_angle_deg=170.0, elevation_deg=None, sides=("left", "right")):
+    # Upper body only (close to the camera). Elbow angle bends the forearm up from a
+    # hanging upper arm; elevation instead lifts the whole straight arm sideways.
+    joints = {}
+    for side, out in (("left", -1.0), ("right", 1.0)):
+        if side not in sides:
+            continue
+        shoulder = (out * 0.2, 1.0)
+        if elevation_deg is None:
+            elbow = (shoulder[0], 0.5)
+            bend = math.radians(elbow_angle_deg)
+            wrist = (elbow[0] + out * 0.4 * math.sin(bend), elbow[1] + 0.4 * math.cos(bend))
+        else:
+            lift = math.radians(elevation_deg)
+            direction = (out * math.sin(lift), -math.cos(lift))
+            elbow = (shoulder[0] + 0.3 * direction[0], shoulder[1] + 0.3 * direction[1])
+            wrist = (shoulder[0] + 0.6 * direction[0], shoulder[1] + 0.6 * direction[1])
+        joints[f"{side}_shoulder"] = shoulder
+        joints[f"{side}_elbow"] = elbow
+        joints[f"{side}_wrist"] = wrist
+    return joints
+
+
+def test_bicep_curl_counts_on_return_to_extended():
+    clf = ExerciseClassifier("bicep_curl")
+    for _ in range(2):
+        _feed(clf, _arms(170))
+        _feed(clf, _arms(100))  # between thresholds: phase is kept
+        _feed(clf, _arms(40))
+    state = _feed(clf, _arms(170))
+    assert state["repCount"] == 2
+    assert state["phase"] == "down"
+
+
+def test_bicep_curl_works_with_a_single_visible_arm():
+    clf = ExerciseClassifier("bicep_curl")
+    _feed(clf, _arms(170, sides=("right",)))
+    _feed(clf, _arms(40, sides=("right",)))
+    state = _feed(clf, _arms(170, sides=("right",)))
+    assert state["repCount"] == 1
+
+
+def test_lateral_raise_counts_reps():
+    clf = ExerciseClassifier("lateral_raise")
+    for _ in range(3):
+        _feed(clf, _arms(elevation_deg=10))
+        _feed(clf, _arms(elevation_deg=50))
+        _feed(clf, _arms(elevation_deg=90))
+    state = _feed(clf, _arms(elevation_deg=10))
+    assert state["repCount"] == 3
+
+
+def test_upper_body_exercises_need_a_visible_arm():
+    clf = ExerciseClassifier("bicep_curl")
+    for _ in range(3):
+        clf.update(_frame(_arms(40), c=0.1))
+    assert clf.state["phase"] == "idle"
