@@ -1,12 +1,12 @@
 # ZenFit — Real-Time 3D Pose Estimation for Exercise Analysis
 
-ZenFit estimates a person's **3D body pose in real time from a regular camera** and uses it to analyse exercises. A web viewer mirrors the motion on a rigged 3D avatar.
+ZenFit estimates a person's **3D body pose in real time from a regular camera** and uses it to count exercise repetitions. The web app draws the detected skeleton over the camera feed and shows the rep count, the movement phase and the tracking confidence live.
 
-The repository holds two pipelines built on the same detection + pose models, plus the training code for a learned movement classifier:
+The repository holds two pipelines built on the same pose model, plus the training code for a learned movement classifier:
 
 | Part | What it does |
 |---|---|
-| `workspace/` | Main app. Python Socket.IO backend runs RTMW3D on camera frames and classifies **squats, push-ups and jumping jacks with joint-angle rules** (rep phases, metrics). Next.js + React Three Fiber client drives a rigged GLB avatar and lets the user pick the exercise |
+| `workspace/` | Main app. A Python Socket.IO backend runs RTMDet person detection and RTMW3D 3D pose estimation on camera frames, then counts reps of **squats, push-ups, jumping jacks, bicep curls and lateral raises with joint-angle rules**. The Next.js client streams the camera, overlays the skeleton and shows the live stats; a `/admin_debug` page shows raw and normalized skeletons, metrics and errors |
 | `speedy_learning/` | Standalone lab. FastAPI server with a WebSocket camera stream, YOLOX person detection + RTMW3D 3D pose on ONNX Runtime, COCO-17 skeleton mapping and post-processing, and a plain Three.js viewer with live overlays |
 | `speedy_learning/models`, `train_cuda_live.py` | Learned movement classifier, trained offline: a spatio-temporal Transformer whose attention is biased by the skeleton graph. It is **not yet wired into either live pipeline** |
 | `labs/` | Signal-processing experiments for pose stability: One-Euro and Kalman filters, bone-length constraints, scale solving, kinematics, with unit tests |
@@ -14,24 +14,46 @@ The repository holds two pipelines built on the same detection + pose models, pl
 ## Pipeline
 
 ```
-camera ──► person detection ──► 3D pose estimation ──► 17-joint skeleton
-           (YOLOX, ONNX Runtime)  (RTMW3D, ONNX Runtime,        │
-                                   CUDA or CPU)                 │
-                 ┌──────────────────────────────────────────────┤
-                 ▼                                              ▼
-   workspace: rule-based exercise          speedy_learning: post-processed
-   classifier + metrics ─► Socket.IO ─►    skeleton ─► WebSocket ─► Three.js
-   Next.js / R3F avatar                    viewer with overlays
+workspace (main app)
 
-   offline: videos ─► pose sequences (.npz) ─► graph-biased ST-Transformer
+browser camera ─► JPEG frames, 10 FPS, Socket.IO ─► RTMDet person box ─► RTMW3D 3D pose
+                                                    (re-detected every   (ONNX Runtime CUDA/CPU,
+                                                     few frames)          PyTorch fallback)
+                                                                                │
+browser: skeleton overlay, ◄── Socket.IO ◄── rep counter ◄── One-Euro ◄── hip-centred,
+rep count, phase, confidence                  (joint-angle    smoothing    torso-scaled
+                                               rules)                      normalization
+
+speedy_learning (lab)
+
+camera ─► WebSocket ─► YOLOX ─► RTMW3D (ONNX) ─► COCO-17 skeleton ─► Three.js viewer
+
+offline
+
+videos ─► pose sequences (.npz) ─► graph-biased ST-Transformer
 ```
+
+## Exercises
+
+Each exercise is a two-phase state machine on joint angles from the normalized pose. A phase only changes after it has been seen on 2 frames in a row, there is a dead zone between the two thresholds, and joints below 0.3 confidence are ignored, so jitter does not create extra reps.
+
+| Exercise | Measured | Needs in frame |
+|---|---|---|
+| Squat | knee angle (down < 120°, up > 155°) | hips, knees, ankles |
+| Push-up | elbow angle (down < 100°, up > 150°) while the torso is roughly horizontal | shoulders, elbows, wrists, hips |
+| Jumping jack | wrists above shoulders and feet spread vs. shoulder width | wrists, shoulders, ankles |
+| Bicep curl | elbow angle of the most bent arm (up < 60°, down > 140°) | one shoulder, elbow and wrist |
+| Lateral raise | arm elevation from hanging (up > 70°, down < 30°) | one shoulder and wrist |
+
+Bicep curls and lateral raises work when you stand close to the camera; the full-body exercises need you to step back until your legs are visible. The skeleton overlay draws joints the backend cannot use in red, which shows what is missing.
 
 ## Highlights
 
 - **Real-time inference** with ONNX Runtime (CUDA provider with CPU fallback), fp32 and fp16 RTMW3D models, and benchmark results for model and runtime variants (`workspace/backend/benchmarks`)
-- **Exercise analysis**: One-Euro smoothed joints feed per-exercise rep counters (squat, push-up, jumping jack) with hysteresis and confidence gating
+- **Rep counting** from One-Euro smoothed joints, with hysteresis, frame confirmation and confidence gating; tested in `workspace/backend/tests`
+- **Live coach UI**: Next.js client with the skeleton drawn over the mirrored camera feed, exercise picker with framing tips, rep counter, phase and tracking confidence, backend connection status
 - **Learned classifier**: dataset parser (video → pose sequences → train/val `.npz`, labels taken from file names) and GPU training with AMP, label smoothing, warm-up + cosine LR schedule and best-checkpoint saving
-- **3D avatar**: Next.js, React Three Fiber and a rigged GLB model driven by the predicted joints
+- **3D avatar (work in progress)**: a rigged GLB model and bone bindings driven by the normalized joints (`workspace/frontend/src/components/avatar`); the debug page shows the model, but the pose-driven avatar is not displayed in the UI yet
 
 ## Getting started
 
@@ -42,9 +64,11 @@ Requirements: Python 3.10–3.12 (torch 2.4.1 and OpenMMLab have no wheels for n
 ```bash
 just setup-venv          # backend virtual environment (torch, OpenMMLab, ONNX Runtime)
 just fetch-models        # MMPose sources in third_party/ and the RTMW3D-L checkpoint (~220 MB)
-just dev-backend         # Socket.IO backend on http://localhost:8001
-just dev-frontend        # Next.js client
+just dev-backend         # Socket.IO backend on http://localhost:8001, reloads on app/ changes
+just dev-frontend        # Next.js client on http://localhost:3000
 ```
+
+Open http://localhost:3000, wait for "Backend connected", pick an exercise and press **Start session**. `/admin_debug` shows the raw and normalized skeletons and the backend errors.
 
 **Speedy lab** (`speedy_learning/`):
 
@@ -74,7 +98,7 @@ python speedy_learning/train_cuda_live.py --epochs 10 --batch-size 4
 
 ```
 workspace/backend    Socket.IO server, RTMW3D runtime, rule-based classifier, benchmarks
-workspace/frontend   Next.js + React Three Fiber client
+workspace/frontend   Next.js client: live coach page, debug page, avatar components
 speedy_learning/     FastAPI lab: detection + pose pipeline, viewer, dataset parser, training
 labs/                Filtering and kinematics experiments with tests
 scripts/             Setup, dev and ONNX preparation scripts (.ps1 and .sh)
