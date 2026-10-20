@@ -14,4 +14,4 @@ if (!(Test-Path $VenvDir)) {
   if (-not $BasePy) { throw "Python 3.10-3.12 not found (py launcher). Install Python 3.12." }
   & $BasePy[0] $BasePy[1] -m venv $VenvDir
 }
-& "$VenvDir/Scripts/python.exe" -m pip install --upgrade pip wheel setuptools==60.2.0
+& "$VenvDir/Scripts/python.exe" -m pip install --upgrade pip wheel setuptools==69.5.1

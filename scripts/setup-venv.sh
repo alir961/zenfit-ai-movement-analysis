@@ -34,12 +34,16 @@ echo "--- [3/6] Verification/Installation de la stack Torch/CUDA ---"
 "$PY" -m pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu121
 "$PY" -c "import torch; print(f'Torch {torch.__version__} valide (CUDA: {torch.version.cuda})')"
 
-echo "--- [4/6] Installation de OpenMMLab (MIM, MMEngine, MMCV) ---"
-"$PY" -m pip install openmim mmengine
+echo "--- [4/6] Installation de OpenMMLab (MMEngine, MMCV) ---"
+"$PY" -m pip install mmengine
 "$PY" -m pip install "mmcv>=2.0.1" --no-build-isolation -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
 
 echo "--- [5/6] Installation des requirements projet ---"
 if [[ -f "$ROOT/workspace/backend/requirements.txt" ]]; then
+  # chumpy and xtcocotools (mmpose dependencies) are sdists whose setup.py imports
+  # pip / numpy, so they cannot build in pip's isolated build environment.
+  "$PY" -m pip install "numpy<2.0.0" cython
+  "$PY" -m pip install "numpy<2.0.0" chumpy==0.70 xtcocotools --no-build-isolation
   "$PY" -m pip install -r "$ROOT/workspace/backend/requirements.txt"
 fi
 

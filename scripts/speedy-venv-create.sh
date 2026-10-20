@@ -24,4 +24,4 @@ if [[ ! -d "$VENV_DIR" ]]; then
   fi
   "$BASE_PY" -m venv "$VENV_DIR"
 fi
-"$VENV_DIR/bin/python" -m pip install --upgrade pip wheel setuptools==60.2.0
+"$VENV_DIR/bin/python" -m pip install --upgrade pip wheel setuptools==69.5.1
