@@ -16,6 +16,17 @@ import cv2
 import time
 import traceback
 
+# mmcv 2.2.0 is the only mmcv wheel built for torch 2.4, but mmdet 3.3.0 asserts
+# mmcv<2.2.0 at import. They work together, so report a version inside its gate
+# (same guard as scripts/speedy-generate-required-onnx.py).
+try:
+    import mmcv
+
+    if tuple(int(p) for p in mmcv.__version__.split(".")[:2] if p.isdigit()) >= (2, 2):
+        mmcv.__version__ = "2.1.0"
+except ImportError:
+    pass
+
 # 1. Setup paths for custom modules
 PROJ_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 RTMP_PATH = os.path.join(PROJ_ROOT, "third_party", "mmpose", "projects", "rtmpose3d")
@@ -34,7 +45,8 @@ try:
     from mmdet.apis import DetInferencer, inference_detector
     from mmengine.registry import DefaultScope
     HAS_MMPOSE = True
-except ImportError:
+except (ImportError, AssertionError) as e:
+    logging.getLogger("zenfit.rtmw3d").warning("MMPose/MMDet unavailable: %s", e)
     HAS_MMPOSE = False
 
 try:
