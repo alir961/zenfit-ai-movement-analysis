@@ -29,7 +29,11 @@ const CONNECTIONS: Array<[string, string]> = [
 const mapToCanvas = (pose: PoseFrame, joint: PoseJoint, width: number, height: number) => {
   let x = joint.x;
   let y = joint.y;
-  if (pose.space === "normalized") {
+  if (pose.space === "camera" && joint.px !== undefined && joint.py !== undefined) {
+    // Camera-space x/y/z are metric 3D coordinates: draw the image position instead.
+    x = joint.px;
+    y = joint.py;
+  } else if (pose.space === "normalized") {
     x = (x + 1) / 2;
     y = 1 - (y + 1) / 2;
   }
@@ -66,8 +70,10 @@ export const SkeletonView = ({ title, pose, showBones, showJoints, showLabels }:
 
     if (!pose) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
+    // The context is already scaled by devicePixelRatio: draw in CSS pixels.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const width = canvas.width / dpr;
+    const height = canvas.height / dpr;
 
     if (showBones) {
       ctx.strokeStyle = "rgba(114, 76, 249, 0.8)";

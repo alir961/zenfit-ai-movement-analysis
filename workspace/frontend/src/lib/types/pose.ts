@@ -26,6 +26,9 @@ export interface PoseJoint {
   y: number;
   z: number;
   c: number;
+  /** Image position (0..1) of the joint; sent with camera-space frames. */
+  px?: number;
+  py?: number;
 }
 
 export interface PoseFrame {
