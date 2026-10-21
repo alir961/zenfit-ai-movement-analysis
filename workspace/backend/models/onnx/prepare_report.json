@@ -1,101 +1,101 @@
 {
-  "out_dir": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx",
+  "out_dir": "workspace/backend/models/onnx",
   "results": [
     {
       "key": "***REMOVED***",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmw3d_l_fp32.onnx"
+      "path": "workspace/backend/models/onnx/rtmw3d_l_fp32.onnx"
     },
     {
       "key": "***REMOVED***",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmw3d_l_fp16.onnx"
+      "path": "workspace/backend/models/onnx/rtmw3d_l_fp16.onnx"
     },
     {
       "key": "***REMOVED***",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmw3d_l_int8.onnx"
+      "path": "workspace/backend/models/onnx/rtmw3d_l_int8.onnx"
     },
     {
       "key": "detector.yolox_tiny_humanart.fp32",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\yolox_tiny_humanart_fp32.onnx"
+      "path": "workspace/backend/models/onnx/yolox_tiny_humanart_fp32.onnx"
     },
     {
       "key": "detector.yolox_tiny_humanart.fp16",
       "status": "ok",
-      "reason": "fp16_fallback_fp32:onnx_type_mismatch:[ONNXRuntimeError] : 1 : FAIL : Load model from D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\yolox_tiny_humanart_fp16.onnx failed:Type Error: Type (tensor(float16)) of output arg (/Cast_5_output_0) of node (/Cast_5) does not match expected type (tensor(float)).",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\yolox_tiny_humanart_fp16.onnx"
+      "reason": "fp16_fallback_fp32:onnx_type_mismatch:[ONNXRuntimeError] : 1 : FAIL : Load model from workspace/backend/models/onnx/yolox_tiny_humanart_fp16.onnx failed:Type Error: Type (tensor(float16)) of output arg (/Cast_5_output_0) of node (/Cast_5) does not match expected type (tensor(float)).",
+      "path": "workspace/backend/models/onnx/yolox_tiny_humanart_fp16.onnx"
     },
     {
       "key": "detector.yolox_tiny_humanart.int8",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\yolox_tiny_humanart_int8.onnx"
+      "path": "workspace/backend/models/onnx/yolox_tiny_humanart_int8.onnx"
     },
     {
       "key": "detector.yolox_s_humanart.fp32",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\yolox_s_humanart_fp32.onnx"
+      "path": "workspace/backend/models/onnx/yolox_s_humanart_fp32.onnx"
     },
     {
       "key": "detector.yolox_s_humanart.fp16",
       "status": "ok",
-      "reason": "fp16_fallback_fp32:onnx_type_mismatch:[ONNXRuntimeError] : 1 : FAIL : Load model from D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\yolox_s_humanart_fp16.onnx failed:Type Error: Type (tensor(float16)) of output arg (/Cast_5_output_0) of node (/Cast_5) does not match expected type (tensor(float)).",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\yolox_s_humanart_fp16.onnx"
+      "reason": "fp16_fallback_fp32:onnx_type_mismatch:[ONNXRuntimeError] : 1 : FAIL : Load model from workspace/backend/models/onnx/yolox_s_humanart_fp16.onnx failed:Type Error: Type (tensor(float16)) of output arg (/Cast_5_output_0) of node (/Cast_5) does not match expected type (tensor(float)).",
+      "path": "workspace/backend/models/onnx/yolox_s_humanart_fp16.onnx"
     },
     {
       "key": "detector.yolox_s_humanart.int8",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\yolox_s_humanart_int8.onnx"
+      "path": "workspace/backend/models/onnx/yolox_s_humanart_int8.onnx"
     },
     {
       "key": "detector.rtmdet_nano.fp32",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmdet_nano_fp32.onnx"
+      "path": "workspace/backend/models/onnx/rtmdet_nano_fp32.onnx"
     },
     {
       "key": "detector.rtmdet_nano.fp16",
       "status": "ok",
-      "reason": "fp16_fallback_fp32:onnx_type_mismatch:[ONNXRuntimeError] : 1 : FAIL : Load model from D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmdet_nano_fp16.onnx failed:Type Error: Type (tensor(float16)) of output arg (/Cast_2_output_0) of node (/Cast_2) does not match expected type (tensor(float)).",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmdet_nano_fp16.onnx"
+      "reason": "fp16_fallback_fp32:onnx_type_mismatch:[ONNXRuntimeError] : 1 : FAIL : Load model from workspace/backend/models/onnx/rtmdet_nano_fp16.onnx failed:Type Error: Type (tensor(float16)) of output arg (/Cast_2_output_0) of node (/Cast_2) does not match expected type (tensor(float)).",
+      "path": "workspace/backend/models/onnx/rtmdet_nano_fp16.onnx"
     },
     {
       "key": "detector.rtmdet_nano.int8",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmdet_nano_int8.onnx"
+      "path": "workspace/backend/models/onnx/rtmdet_nano_int8.onnx"
     },
     {
       "key": "detector.rtmdet_tiny.fp32",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmdet_tiny_fp32.onnx"
+      "path": "workspace/backend/models/onnx/rtmdet_tiny_fp32.onnx"
     },
     {
       "key": "detector.rtmdet_tiny.fp16",
       "status": "ok",
-      "reason": "fp16_fallback_fp32:onnx_type_mismatch:[ONNXRuntimeError] : 1 : FAIL : Load model from D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmdet_tiny_fp16.onnx failed:Type Error: Type (tensor(float16)) of output arg (/Cast_2_output_0) of node (/Cast_2) does not match expected type (tensor(float)).",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmdet_tiny_fp16.onnx"
+      "reason": "fp16_fallback_fp32:onnx_type_mismatch:[ONNXRuntimeError] : 1 : FAIL : Load model from workspace/backend/models/onnx/rtmdet_tiny_fp16.onnx failed:Type Error: Type (tensor(float16)) of output arg (/Cast_2_output_0) of node (/Cast_2) does not match expected type (tensor(float)).",
+      "path": "workspace/backend/models/onnx/rtmdet_tiny_fp16.onnx"
     },
     {
       "key": "detector.rtmdet_tiny.int8",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmdet_tiny_int8.onnx"
+      "path": "workspace/backend/models/onnx/rtmdet_tiny_int8.onnx"
     },
     {
       "key": "detector.person_foot_qualcomm.int8",
       "status": "ok",
       "reason": "already_exists",
-      "path": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\person_foot_detection.onnx"
+      "path": "workspace/backend/models/onnx/person_foot_detection.onnx"
     }
   ]
 }

@@ -1,12 +1,12 @@
 {
   "status": "ok",
   "meta": {
-    "video": "D:\\epitech\\zenfit\\datasets\\jumping_jacks5.mp4",
+    "video": "datasets/jumping_jacks5.mp4",
     "frame_idx": 100,
     "video_total_frames": 169,
     "seed": 80,
-    "det_model": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\yolox_s_humanart_fp32.onnx",
-    "pose_model": "D:\\epitech\\zenfit\\workspace\\backend\\models\\onnx\\rtmw3d_l_fp16.onnx",
+    "det_model": "workspace/backend/models/onnx/yolox_s_humanart_fp32.onnx",
+    "pose_model": "workspace/backend/models/onnx/rtmw3d_l_fp16.onnx",
     "requested_providers": [
       "CUDAExecutionProvider",
       "CPUExecutionProvider"
