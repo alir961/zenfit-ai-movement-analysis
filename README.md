@@ -137,3 +137,7 @@ docs/                Architecture, socket events and debug metrics notes
 ## Tech stack
 
 Python · PyTorch · ONNX Runtime · MMPose (RTMW3D) · YOLOX · OpenCV · NumPy · FastAPI · Socket.IO · Next.js · React Three Fiber · Three.js
+
+## License
+
+[MIT](LICENSE)
