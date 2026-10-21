@@ -49,7 +49,7 @@ What each step does:
   - `speedy_learning/backend/requirements.txt`
 
 3. `speedy-third-party-ensure`
-- Clones/updates `third_party/mmpose` automatically on `main`
+- Clones `third_party/mmpose` at a pinned commit (override with `MMPOSE_COMMIT`)
 - Validates required mmpose folders are present
 
 4. `speedy-onnx-prepare`

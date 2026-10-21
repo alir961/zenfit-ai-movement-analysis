@@ -86,7 +86,7 @@ cd zenfit-ai-movement-analysis
 
 ```bash
 just setup-venv          # workspace/backend/.venv: torch (CUDA 12.1), OpenMMLab, ONNX Runtime; several GB, takes a while
-just fetch-models        # MMPose sources in third_party/ and the RTMW3D-L checkpoint (~220 MB) at the repository root
+just fetch-models        # MMPose (pinned commit) in third_party/ and the RTMW3D-L checkpoint (~220 MB, SHA-256 checked) at the repository root
 (cd workspace/frontend && bun install)   # client dependencies, once
 just dev-backend         # Socket.IO backend on http://localhost:8001, reloads on app/ changes
 just dev-frontend        # Next.js client on http://localhost:3000 (second terminal)

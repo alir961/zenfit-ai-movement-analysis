@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TypedDict, Literal, Dict
+from typing import List, NotRequired, TypedDict, Literal, Dict
 
 POSE_INPUT = "pose/input"
 SESSION_START = "session/start"
@@ -38,6 +38,9 @@ class PoseJoint(TypedDict):
     y: float
     z: float
     c: float
+    # Image position (0..1); sent with camera-space frames
+    px: NotRequired[float]
+    py: NotRequired[float]
 
 
 class PoseFrame(TypedDict):

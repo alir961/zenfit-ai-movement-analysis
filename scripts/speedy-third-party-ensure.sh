@@ -2,18 +2,22 @@
 set -euo pipefail
 
 REPO_URL="${1:-https://github.com/open-mmlab/mmpose.git}"
+# Pinned MMPose commit: its config is executed and its code imported at startup,
+# so the checkout must not follow whatever is pushed to main.
+MMPOSE_COMMIT="${MMPOSE_COMMIT:-759b39c13fea6ba094afc1fa932f51dc1b11cbf9}"
 TARGET_DIR="third_party/mmpose"
 
 mkdir -p "$(dirname "$TARGET_DIR")"
 
 if [[ ! -d "$TARGET_DIR/.git" ]]; then
-  echo "[speedy-third-party] Cloning $REPO_URL -> $TARGET_DIR"
-  git clone --depth 1 --branch main "$REPO_URL" "$TARGET_DIR"
-else
-  echo "[speedy-third-party] Updating existing repo at $TARGET_DIR"
-  git -C "$TARGET_DIR" fetch origin main
-  git -C "$TARGET_DIR" checkout main
-  git -C "$TARGET_DIR" pull --ff-only origin main
+  echo "[speedy-third-party] Cloning $REPO_URL @ $MMPOSE_COMMIT -> $TARGET_DIR"
+  git init -q "$TARGET_DIR"
+  git -C "$TARGET_DIR" remote add origin "$REPO_URL"
+fi
+if [[ "$(git -C "$TARGET_DIR" rev-parse -q --verify HEAD || true)" != "$MMPOSE_COMMIT" ]]; then
+  echo "[speedy-third-party] Checking out $MMPOSE_COMMIT in $TARGET_DIR"
+  git -C "$TARGET_DIR" fetch -q --depth 1 origin "$MMPOSE_COMMIT"
+  git -C "$TARGET_DIR" checkout -q --detach "$MMPOSE_COMMIT"
 fi
 
 for s in "$TARGET_DIR/projects" "$TARGET_DIR/mmpose"; do
@@ -23,5 +27,4 @@ for s in "$TARGET_DIR/projects" "$TARGET_DIR/mmpose"; do
   fi
 done
 
-head="$(git -C "$TARGET_DIR" rev-parse --short HEAD)"
-echo "[speedy-third-party] Ready (main @ $head)"
+echo "[speedy-third-party] Ready (mmpose @ ${MMPOSE_COMMIT:0:12})"

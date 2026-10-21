@@ -18,8 +18,11 @@
 - metrics: computed from normalized pose
 
 ## Common Thresholds
-- joint visibility: c >= 0.1
-- low confidence: average c < 0.35
+- joint drawn in the debug skeleton: c >= 0.1 (`SkeletonView.tsx`)
+- joint used for smoothing and exercise classification: c >= 0.3 (`MIN_JOINT_CONFIDENCE`)
+- person detection score: > 0.35 (RTMW3D detector)
+- the debug `confidence` metric averages c over every joint in the frame (133 for
+  RTMW3D), so face and hand keypoints pull it down
 
 ## Notes
 - admin_debug is allowed to be utilitarian.

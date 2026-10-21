@@ -78,9 +78,15 @@ client's rep counter and pose smoothing, so each session counts from zero.
   x: number,
   y: number,
   z: number,
-  c: number
+  c: number,
+  px?: number,  // image position, 0..1 (camera-space frames only)
+  py?: number
 }
 ```
+
+Frames from the RTMW3D backend carry the 133 COCO-WholeBody keypoints (body, feet,
+face and hands), not only the 17 body joints. Unknown extra keypoints are named
+`kpt_<index>`.
 
 ### NormalizationParams
 ```
